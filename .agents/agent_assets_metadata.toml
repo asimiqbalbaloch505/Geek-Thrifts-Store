@@ -1,0 +1,43 @@
+uploads = []
+
+[[generated]]
+id = "CUtSvrfk9CBXNpTfs1LVP"
+uri = "file://attached_assets/generated_images/generated_image.png"
+type = "image"
+title = "generated_image"
+
+[[outputs]]
+id = "hD85ieIFcxfoSm6b0TZWK"
+uri = "file://artifacts/geekthrifts/public/images/shirt_1.jpg"
+type = "image"
+title = "men's formal dress shirt clean solid background minimal"
+
+[[outputs]]
+id = "N2ZDlfaD4EOPpOWoiX60E"
+uri = "file://artifacts/geekthrifts/public/images/shirt_2.jpg"
+type = "image"
+title = "men's formal dress shirt clean solid background minimal"
+
+[[outputs]]
+id = "rNaq8aZm83FdVkPoWMfGm"
+uri = "file://artifacts/geekthrifts/public/images/shirt_3.jpg"
+type = "image"
+title = "men's formal dress shirt clean solid background minimal"
+
+[[outputs]]
+id = "56PSpz1hUnCL5P47B_HZf"
+uri = "file://artifacts/geekthrifts/public/images/shirt_4.jpg"
+type = "image"
+title = "men's formal dress shirt clean solid background minimal"
+
+[[outputs]]
+id = "Wg7N5axwliTQUesbwyJ6Z"
+uri = "file://artifacts/geekthrifts/public/images/tie_1.jpg"
+type = "image"
+title = "men's silk tie clean solid background minimal"
+
+[[outputs]]
+id = "7MA1W5pKJxIvx5nP4vNXr"
+uri = "file://artifacts/geekthrifts/public/images/tie_2.jpg"
+type = "image"
+title = "men's silk tie clean solid background minimal"

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "GeekThrifts"
+version = "1.0.0"
+id = "artifacts/geekthrifts"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26252
+
+[services.development]
+run = "pnpm --filter @workspace/geekthrifts run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/geekthrifts", "run", "build" ]
+publicDir = "artifacts/geekthrifts/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26252"
+BASE_PATH = "/"
