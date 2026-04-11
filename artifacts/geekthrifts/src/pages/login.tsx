@@ -1,8 +1,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useAdminLogin } from "@workspace/api-client-react";
-import { useAuth } from "@/hooks/use-auth";
+import { useLogin } from "@workspace/api-client-react";
+import { useUserAuth } from "@/hooks/use-user-auth";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,64 +23,59 @@ const loginSchema = z.object({
 });
 type LoginValues = z.infer<typeof loginSchema>;
 
-export default function AdminLogin() {
-  const { login, isAuthenticated } = useAuth();
+export default function LoginPage() {
+  const { userLogin, isUserLoggedIn } = useUserAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const adminLogin = useAdminLogin();
+  const loginMutation = useLogin();
+
+  useEffect(() => {
+    if (isUserLoggedIn) setLocation("/");
+  }, [isUserLoggedIn, setLocation]);
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
 
-  useEffect(() => {
-    if (isAuthenticated) setLocation("/admin");
-  }, [isAuthenticated, setLocation]);
-
   const onSubmit = (values: LoginValues) => {
-    adminLogin.mutate({ data: values }, {
+    loginMutation.mutate({ data: values }, {
       onSuccess: (data) => {
-        if (data.success && data.token) {
-          login(data.token);
-          setLocation("/admin");
-        }
+        userLogin(data.token, data.user);
+        toast({ title: "Welcome back!", description: `Good to see you, ${data.user.name}.` });
+        setLocation("/");
       },
       onError: () => {
-        toast({
-          title: "Login Failed",
-          description: "Invalid email or password.",
-          variant: "destructive",
-        });
+        toast({ title: "Login failed", description: "Invalid email or password.", variant: "destructive" });
       },
     });
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 font-sans text-foreground">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
           <Link href="/">
             <span className="font-serif text-2xl font-bold tracking-tighter uppercase cursor-pointer hover:opacity-80 transition-opacity">GeekThrifts.</span>
           </Link>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold mt-2">Admin Portal</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold mt-2">Sign In to Your Account</p>
         </div>
 
         <div className="border border-border bg-card p-8 md:p-10">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" data-testid="form-admin-login">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" data-testid="form-login">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Admin Email</FormLabel>
+                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Email Address</FormLabel>
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="admin@geekthrifts.com"
+                        placeholder="you@example.com"
                         className="h-12 rounded-none border-border focus-visible:ring-foreground"
-                        data-testid="input-admin-email"
+                        data-testid="input-email"
                         {...field}
                       />
                     </FormControl>
@@ -99,7 +94,7 @@ export default function AdminLogin() {
                         type="password"
                         placeholder="••••••••"
                         className="h-12 rounded-none border-border focus-visible:ring-foreground"
-                        data-testid="input-admin-password"
+                        data-testid="input-password"
                         {...field}
                       />
                     </FormControl>
@@ -107,16 +102,26 @@ export default function AdminLogin() {
                   </FormItem>
                 )}
               />
+
               <Button
                 type="submit"
                 className="w-full h-12 rounded-none uppercase font-bold tracking-widest text-xs mt-2"
-                disabled={adminLogin.isPending}
-                data-testid="button-admin-login"
+                disabled={loginMutation.isPending}
+                data-testid="button-login"
               >
-                {adminLogin.isPending ? "Authenticating..." : "Sign In"}
+                {loginMutation.isPending ? "Signing In..." : "Sign In"}
               </Button>
             </form>
           </Form>
+
+          <div className="mt-6 text-center">
+            <p className="text-xs text-muted-foreground">
+              Don't have an account?{" "}
+              <Link href="/signup">
+                <span className="font-bold underline underline-offset-4 cursor-pointer hover:opacity-70 transition-opacity">Create one</span>
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

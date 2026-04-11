@@ -33,3 +33,10 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+ADMIN_EMAIL = "asimiqbalbaloch505@gmail.com"
+ADMIN_PASSWORD = "Asim@39794"
+JWT_SECRET = "geekthrifts-jwt-secret-key-2024-xK9mP2nQ"

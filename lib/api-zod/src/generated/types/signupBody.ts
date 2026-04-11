@@ -6,7 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AdminLoginBody {
+export interface SignupBody {
+  name: string;
   email: string;
   password: string;
 }

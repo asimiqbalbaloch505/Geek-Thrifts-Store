@@ -15,6 +15,43 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Register a new user
+ */
+export const SignupBody = zod.object({
+  name: zod.string(),
+  email: zod.string(),
+  password: zod.string(),
+});
+
+/**
+ * @summary Login as a user
+ */
+export const LoginBody = zod.object({
+  email: zod.string(),
+  password: zod.string(),
+});
+
+export const LoginResponse = zod.object({
+  token: zod.string(),
+  user: zod.object({
+    id: zod.number(),
+    name: zod.string(),
+    email: zod.string(),
+    createdAt: zod.string(),
+  }),
+});
+
+/**
+ * @summary Get current user profile
+ */
+export const GetMeResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  email: zod.string(),
+  createdAt: zod.string(),
+});
+
+/**
  * @summary List all categories
  */
 export const ListCategoriesResponseItem = zod.object({
@@ -295,10 +332,10 @@ export const UpdateOrderStatusResponse = zod.object({
 });
 
 /**
- * @summary Admin login
+ * @summary Admin login with email and password
  */
 export const AdminLoginBody = zod.object({
-  username: zod.string(),
+  email: zod.string(),
   password: zod.string(),
 });
 

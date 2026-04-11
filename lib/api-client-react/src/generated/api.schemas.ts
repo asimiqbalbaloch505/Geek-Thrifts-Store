@@ -18,6 +18,29 @@ export interface ErrorResponse {
   error: string;
 }
 
+export interface SignupBody {
+  name: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginBody {
+  email: string;
+  password: string;
+}
+
+export interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: UserProfile;
+}
+
 export interface Category {
   id: number;
   name: string;
@@ -124,7 +147,7 @@ export interface UpdateOrderStatusBody {
 }
 
 export interface AdminLoginBody {
-  username: string;
+  email: string;
   password: string;
 }
 

@@ -1,14 +1,14 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { ordersTable, productsTable, categoriesTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { AdminLoginBody } from "@workspace/api-zod";
-import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 const router = Router();
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "admin";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@geekthrifts.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "geekthrifts2024";
+const JWT_SECRET = process.env.JWT_SECRET ?? "geekthrifts-fallback-secret";
 
 router.post("/login", async (req, res): Promise<void> => {
   const parsed = AdminLoginBody.safeParse(req.body);
@@ -16,9 +16,9 @@ router.post("/login", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const { username, password } = parsed.data;
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    const token = crypto.randomBytes(32).toString("hex");
+  const { email, password } = parsed.data;
+  if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
+    const token = jwt.sign({ role: "admin", email }, JWT_SECRET, { expiresIn: "7d" });
     res.json({ success: true, token });
   } else {
     res.status(401).json({ error: "Invalid credentials" });

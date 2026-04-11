@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AdminLoginBody {
+export interface UserProfile {
+  id: number;
+  name: string;
   email: string;
-  password: string;
+  createdAt: string;
 }

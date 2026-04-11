@@ -5,8 +5,9 @@
  * GeekThrifts ecommerce API
  * OpenAPI spec version: 0.1.0
  */
+import type { UserProfile } from "./userProfile";
 
-export interface AdminLoginBody {
-  email: string;
-  password: string;
+export interface AuthResponse {
+  token: string;
+  user: UserProfile;
 }
