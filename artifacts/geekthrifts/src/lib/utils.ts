@@ -13,3 +13,10 @@ export function formatPKR(amount: number) {
     maximumFractionDigits: 0,
   }).format(amount).replace("PKR", "PKR ")
 }
+
+export function getImageUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith("http")) return url;
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  return `${base}${url.startsWith("/") ? url : `/${url}`}`;
+}
