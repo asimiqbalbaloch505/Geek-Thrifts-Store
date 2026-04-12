@@ -16,7 +16,7 @@ import {
 const CATEGORY_SLUGS = [
   { label: "Shirts", slug: "shirts", coming: false },
   { label: "Ties", slug: "ties", coming: false },
-  { label: "Shoes", slug: "shoes", coming: true },
+  { label: "Shoes", slug: "shoes", coming: false },
 ];
 
 function CategoryMegaNav({ label, slug, coming }: { label: string; slug: string; coming: boolean }) {

@@ -31,10 +31,6 @@ export default function Products() {
     { query: { queryKey: getListProductsQueryKey(categoryId ? { categoryId } : undefined) } }
   );
 
-  const isShoesSelected =
-    categoryParam?.toLowerCase() === "shoes" ||
-    (categoryId && categories?.find(c => c.id === categoryId)?.name.toLowerCase() === "shoes");
-
   const activeCategory = categoryId ? categories?.find(c => c.id === categoryId) : null;
   const pageTitle = activeCategory?.name ?? (categoryParam ? categoryParam : "All Products");
 
@@ -54,9 +50,7 @@ export default function Products() {
           <h1 className="font-serif text-2xl md:text-3xl font-bold text-gray-900 tracking-tight capitalize">
             {pageTitle}
           </h1>
-          {!isShoesSelected && (
-            <span className="text-[13px] text-gray-400">{products?.length ?? 0} Items</span>
-          )}
+          <span className="text-[13px] text-gray-400">{products?.length ?? 0} Items</span>
         </div>
 
         {/* Filter pills */}
@@ -67,13 +61,7 @@ export default function Products() {
             </button>
           </Link>
           {categories?.map(cat => {
-            const isShoes = cat.slug === "shoes" || cat.name.toLowerCase() === "shoes";
             const isActive = categoryParam === cat.slug || categoryId === cat.id;
-            if (isShoes) return (
-              <button key={cat.id} disabled className="h-8 px-4 text-[12px] font-semibold uppercase tracking-[0.1em] border border-gray-100 text-gray-300 cursor-not-allowed">
-                {cat.name}
-              </button>
-            );
             return (
               <Link key={cat.id} href={`/products?category=${cat.slug}`}>
                 <button className={`h-8 px-4 text-[12px] font-semibold uppercase tracking-[0.1em] transition-colors border ${isActive ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-700 hover:text-gray-900"}`}>
@@ -85,14 +73,7 @@ export default function Products() {
         </div>
 
         {/* Content */}
-        {isShoesSelected ? (
-          <div className="py-28 text-center bg-gray-50 border border-gray-100">
-            <h2 className="font-serif text-3xl font-bold mb-3">Coming Soon</h2>
-            <p className="text-[14px] text-gray-500 max-w-sm mx-auto">
-              Formal footwear — oxfords, loafers — currently being curated. Check back soon.
-            </p>
-          </div>
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
             {Array(8).fill(0).map((_, i) => (
               <div key={i}>

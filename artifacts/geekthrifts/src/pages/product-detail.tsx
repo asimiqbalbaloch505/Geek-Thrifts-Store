@@ -21,8 +21,6 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
 
-  const isShoes = product?.categoryName?.toLowerCase() === "shoes";
-
   const handleAddToCart = () => {
     if (!product) return;
     if (product.sizes?.length > 0 && !selectedSize) {
@@ -52,16 +50,12 @@ export default function ProductDetail() {
     );
   }
 
-  if (!product || isShoes) {
+  if (!product) {
     return (
       <Layout>
         <div className="max-w-[1400px] mx-auto px-4 py-28 text-center">
-          <h1 className="font-serif text-3xl font-bold tracking-tight mb-3 text-gray-900">
-            {isShoes ? "Coming Soon" : "Product Not Found"}
-          </h1>
-          <p className="text-[14px] text-gray-500 mb-6">
-            {isShoes ? "Our shoe collection is being curated. Check back soon." : "This product doesn't exist or has been removed."}
-          </p>
+          <h1 className="font-serif text-3xl font-bold tracking-tight mb-3 text-gray-900">Product Not Found</h1>
+          <p className="text-[14px] text-gray-500 mb-6">This product doesn't exist or has been removed.</p>
           <Link href="/products">
             <button className="h-10 px-8 bg-gray-900 text-white text-[12px] uppercase tracking-[0.12em] font-semibold hover:bg-gray-800 transition-colors">
               Back to Products
