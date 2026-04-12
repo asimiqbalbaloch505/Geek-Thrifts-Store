@@ -4,7 +4,7 @@ import { useUserAuth } from "@/hooks/use-user-auth";
 import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
 import { getImageUrl } from "@/lib/utils";
 import { Menu, X, ShoppingBag, User, LogOut, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,63 +19,70 @@ const CATEGORY_SLUGS = [
   { label: "Shoes", slug: "shoes", coming: true },
 ];
 
-function CategoryDropdown({ label, slug, coming }: { label: string; slug: string; coming: boolean }) {
+function CategoryMegaNav({ label, slug, coming }: { label: string; slug: string; coming: boolean }) {
+  const [open, setOpen] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const { data: products } = useListProducts(undefined, {
     query: { queryKey: getListProductsQueryKey() }
   });
-  const categoryProducts = products?.filter(p => p.isActive && p.categoryName?.toLowerCase() === label.toLowerCase()).slice(0, 4) ?? [];
+  const items = products?.filter(p => p.isActive && p.categoryName?.toLowerCase() === label.toLowerCase()).slice(0, 4) ?? [];
 
   if (coming) {
     return (
-      <span className="text-muted-foreground cursor-not-allowed text-xs uppercase tracking-widest font-bold">
+      <span className="text-sm text-gray-400 cursor-not-allowed tracking-wide">
         {label}
+        <span className="ml-1 text-[10px] font-medium uppercase tracking-widest align-middle">Soon</span>
       </span>
     );
   }
 
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setOpen(true);
+  };
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => setOpen(false), 120);
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-1 text-xs uppercase tracking-widest font-bold hover:text-muted-foreground transition-colors focus:outline-none group" data-testid={`nav-${slug}`}>
-        {label}
-        <ChevronDown className="w-3 h-3 transition-transform group-data-[state=open]:rotate-180" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        sideOffset={16}
-        className="rounded-none border border-border bg-popover p-0 w-64 shadow-none"
-      >
-        {categoryProducts.length > 0 ? (
-          <>
-            <div className="p-3 border-b border-border">
+    <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+      <Link href={`/products?category=${slug}`}>
+        <button className={`flex items-center gap-0.5 text-sm font-medium tracking-wide hover:text-black transition-colors py-2 group ${open ? "text-black" : "text-gray-700"}`}>
+          {label}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        </button>
+      </Link>
+
+      {open && items.length > 0 && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
+          <div className="bg-white border border-gray-100 shadow-sm min-w-[240px]">
+            <div className="p-3 border-b border-gray-100">
               <Link href={`/products?category=${slug}`}>
-                <span className="font-sans text-[10px] uppercase tracking-widest font-bold text-muted-foreground hover:text-foreground transition-colors">
-                  View All {label}
+                <span className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-500 hover:text-black transition-colors">
+                  All {label} ({items.length}+)
                 </span>
               </Link>
             </div>
-            {categoryProducts.map(p => (
+            {items.map(p => (
               <Link key={p.id} href={`/products/${p.id}`}>
-                <DropdownMenuItem className="rounded-none cursor-pointer p-0 focus:bg-accent">
-                  <div className="flex items-center gap-3 w-full p-3">
-                    {p.imageUrl && (
-                      <div className="w-10 h-12 flex-shrink-0 overflow-hidden bg-muted">
-                        <img src={getImageUrl(p.imageUrl)} alt={p.name} className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-sans text-xs font-bold truncate">{p.name}</p>
-                      <p className="font-sans text-[10px] text-muted-foreground">PKR {Number(p.price).toLocaleString()}</p>
+                <div className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors cursor-pointer">
+                  {p.imageUrl && (
+                    <div className="w-9 h-11 flex-shrink-0 overflow-hidden bg-gray-100">
+                      <img src={getImageUrl(p.imageUrl)} alt={p.name} className="w-full h-full object-cover object-center" />
                     </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-medium text-gray-900 truncate leading-tight">{p.name}</p>
+                    <p className="text-[12px] text-gray-500 mt-0.5">PKR {Number(p.price).toLocaleString()}</p>
                   </div>
-                </DropdownMenuItem>
+                </div>
               </Link>
             ))}
-          </>
-        ) : (
-          <div className="p-4 text-xs text-muted-foreground font-sans uppercase tracking-widest">No items yet</div>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -86,91 +93,90 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans">
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between gap-6">
+    <div className="min-h-screen flex flex-col bg-white text-gray-900 font-sans">
 
-          <Link href="/" className="font-serif text-lg font-bold tracking-tighter uppercase flex-shrink-0">
-            GeekThrifts.
+      {/* Top announcement bar */}
+      <div className="bg-gray-900 text-white text-center py-2 px-4 text-[11px] tracking-widest uppercase font-medium">
+        Free Cash on Delivery — Karachi, Lahore & Islamabad
+      </div>
+
+      <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 h-16 flex items-center gap-8">
+
+          {/* Logo */}
+          <Link href="/" className="flex-shrink-0 text-[22px] font-bold tracking-tight text-gray-900 font-serif">
+            GeekThrifts
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8">
-            <Link href="/" className={`text-xs uppercase tracking-widest font-bold hover:text-muted-foreground transition-colors ${location === "/" ? "" : "text-muted-foreground"}`}>
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-8 flex-1">
+            <Link href="/" className={`text-sm font-medium tracking-wide transition-colors ${location === "/" ? "text-black" : "text-gray-600 hover:text-black"}`}>
               Home
             </Link>
             {CATEGORY_SLUGS.map(cat => (
-              <CategoryDropdown key={cat.slug} {...cat} />
+              <CategoryMegaNav key={cat.slug} {...cat} />
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 ml-auto">
-            <Link href="/cart" className="relative p-2.5 hover:opacity-70 transition-opacity" data-testid="link-cart" aria-label="Cart">
-              <ShoppingBag className="w-4 h-4" />
-              {totalItems > 0 && (
-                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-foreground text-background text-[9px] flex items-center justify-center rounded-full font-bold">
-                  {totalItems}
-                </span>
-              )}
-            </Link>
-
+          {/* Right icons */}
+          <div className="flex items-center gap-1 ml-auto">
             {isUserLoggedIn && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-1.5 px-2.5 py-2 text-xs uppercase tracking-widest font-bold hover:opacity-70 transition-opacity" data-testid="button-user-menu" aria-label="Account">
+                  <button className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-700 hover:text-black transition-colors font-medium" aria-label="Account">
                     <User className="w-4 h-4" />
                     <span className="hidden md:inline">{user.name.split(" ")[0]}</span>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-none border-border font-sans text-xs w-44">
+                <DropdownMenuContent align="end" className="rounded-none border-gray-100 font-sans text-sm w-48 shadow-sm">
                   <div className="px-3 py-2.5">
-                    <p className="font-bold text-xs uppercase tracking-widest truncate">{user.name}</p>
-                    <p className="text-muted-foreground text-[10px] truncate mt-0.5">{user.email}</p>
+                    <p className="font-semibold text-sm truncate">{user.name}</p>
+                    <p className="text-gray-500 text-xs truncate mt-0.5">{user.email}</p>
                   </div>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer text-xs uppercase tracking-widest font-bold gap-2 rounded-none"
-                    onClick={userLogout}
-                    data-testid="button-logout"
-                  >
-                    <LogOut className="w-3 h-3" />
+                  <DropdownMenuItem className="cursor-pointer text-sm gap-2 rounded-none" onClick={userLogout}>
+                    <LogOut className="w-3.5 h-3.5" />
                     Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="hidden md:flex items-center gap-1 text-xs uppercase tracking-widest">
-                <Link href="/login" className="font-bold px-2.5 py-2 hover:opacity-70 transition-opacity" data-testid="link-login">Sign In</Link>
-                <span className="text-muted-foreground text-[10px]">/</span>
-                <Link href="/signup" className="font-bold px-2.5 py-2 hover:opacity-70 transition-opacity" data-testid="link-signup">Join</Link>
+              <div className="hidden md:flex items-center gap-0.5 text-sm">
+                <Link href="/login" className="px-3 py-2 text-gray-700 hover:text-black transition-colors font-medium">Sign In</Link>
+                <span className="text-gray-300">/</span>
+                <Link href="/signup" className="px-3 py-2 text-gray-700 hover:text-black transition-colors font-medium">Join</Link>
               </div>
             )}
 
-            <button
-              className="md:hidden p-2.5 hover:opacity-70 transition-opacity"
-              onClick={() => setIsOpen(!isOpen)}
-              aria-label="Menu"
-            >
-              {isOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            <Link href="/cart" className="relative px-3 py-2 text-gray-700 hover:text-black transition-colors" aria-label="Cart">
+              <ShoppingBag className="w-5 h-5" />
+              {totalItems > 0 && (
+                <span className="absolute top-1.5 right-1 w-4 h-4 bg-gray-900 text-white text-[9px] flex items-center justify-center rounded-full font-bold">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
+
+            <button className="md:hidden px-2 py-2 text-gray-700" onClick={() => setIsOpen(!isOpen)} aria-label="Menu">
+              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
+        {/* Mobile menu */}
         {isOpen && (
-          <div className="md:hidden border-t border-border bg-background absolute top-14 left-0 w-full p-5 flex flex-col gap-5 font-sans uppercase tracking-widest text-xs font-bold z-50">
-            <Link href="/" onClick={() => setIsOpen(false)}>Home</Link>
-            <Link href="/products?category=shirts" onClick={() => setIsOpen(false)}>Shirts</Link>
-            <Link href="/products?category=ties" onClick={() => setIsOpen(false)}>Ties</Link>
-            <span className="text-muted-foreground">Shoes — Coming Soon</span>
-            <div className="border-t border-border pt-4 flex flex-col gap-4">
+          <div className="md:hidden border-t border-gray-100 bg-white absolute left-0 w-full p-5 flex flex-col gap-4 z-50 shadow-sm">
+            <Link href="/" onClick={() => setIsOpen(false)} className="text-sm font-medium text-gray-900">Home</Link>
+            <Link href="/products?category=shirts" onClick={() => setIsOpen(false)} className="text-sm font-medium text-gray-900">Shirts</Link>
+            <Link href="/products?category=ties" onClick={() => setIsOpen(false)} className="text-sm font-medium text-gray-900">Ties</Link>
+            <span className="text-sm text-gray-400">Shoes — Coming Soon</span>
+            <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
               {isUserLoggedIn && user ? (
-                <>
-                  <span className="normal-case text-xs font-bold">{user.name}</span>
-                  <button className="text-left" onClick={() => { userLogout(); setIsOpen(false); }}>Sign Out</button>
-                </>
+                <button className="text-left text-sm font-medium text-gray-900" onClick={() => { userLogout(); setIsOpen(false); }}>Sign Out</button>
               ) : (
                 <>
-                  <Link href="/login" onClick={() => setIsOpen(false)}>Sign In</Link>
-                  <Link href="/signup" onClick={() => setIsOpen(false)}>Join</Link>
+                  <Link href="/login" onClick={() => setIsOpen(false)} className="text-sm font-medium text-gray-900">Sign In</Link>
+                  <Link href="/signup" onClick={() => setIsOpen(false)} className="text-sm font-medium text-gray-900">Create Account</Link>
                 </>
               )}
             </div>
@@ -182,40 +188,39 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="border-t border-border bg-background py-12 mt-auto">
-        <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-10">
-          <div>
-            <h3 className="font-serif font-bold text-base tracking-tighter uppercase mb-3">GeekThrifts.</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-xs">
-              Curated Pakistani thrift fashion. Formal shirts, designer ties, and classic shoes — all verified and priced fairly.
+      <footer className="border-t border-gray-100 bg-white py-12">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="md:col-span-2">
+            <h3 className="font-serif font-bold text-xl tracking-tight mb-3">GeekThrifts</h3>
+            <p className="text-[13px] text-gray-500 leading-relaxed max-w-xs">
+              Curated thrift fashion from the world's finest labels. Verified, priced fairly, and delivered across Pakistan.
             </p>
           </div>
           <div>
-            <h4 className="font-bold text-xs uppercase tracking-widest mb-4">Shop</h4>
-            <ul className="flex flex-col gap-2.5 text-xs text-muted-foreground">
-              <li><Link href="/products" className="hover:text-foreground transition-colors">All Products</Link></li>
-              <li><Link href="/products?category=shirts" className="hover:text-foreground transition-colors">Shirts</Link></li>
-              <li><Link href="/products?category=ties" className="hover:text-foreground transition-colors">Ties</Link></li>
-              <li><span className="cursor-default">Shoes — Coming Soon</span></li>
+            <h4 className="font-semibold text-sm mb-4">Shop</h4>
+            <ul className="space-y-2.5">
+              <li><Link href="/products" className="text-[13px] text-gray-500 hover:text-black transition-colors">All Products</Link></li>
+              <li><Link href="/products?category=shirts" className="text-[13px] text-gray-500 hover:text-black transition-colors">Shirts</Link></li>
+              <li><Link href="/products?category=ties" className="text-[13px] text-gray-500 hover:text-black transition-colors">Ties</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="font-bold text-xs uppercase tracking-widest mb-4">Account</h4>
-            <ul className="flex flex-col gap-2.5 text-xs text-muted-foreground">
+            <h4 className="font-semibold text-sm mb-4">Account</h4>
+            <ul className="space-y-2.5">
               {isUserLoggedIn ? (
-                <li><button className="hover:text-foreground transition-colors" onClick={userLogout}>Sign Out</button></li>
+                <li><button className="text-[13px] text-gray-500 hover:text-black transition-colors" onClick={userLogout}>Sign Out</button></li>
               ) : (
                 <>
-                  <li><Link href="/login" className="hover:text-foreground transition-colors">Sign In</Link></li>
-                  <li><Link href="/signup" className="hover:text-foreground transition-colors">Create Account</Link></li>
+                  <li><Link href="/login" className="text-[13px] text-gray-500 hover:text-black transition-colors">Sign In</Link></li>
+                  <li><Link href="/signup" className="text-[13px] text-gray-500 hover:text-black transition-colors">Create Account</Link></li>
                 </>
               )}
-              <li><span className="cursor-default">Cash on Delivery</span></li>
+              <li><span className="text-[13px] text-gray-400">Cash on Delivery</span></li>
             </ul>
           </div>
         </div>
-        <div className="container mx-auto px-4 mt-10 pt-8 border-t border-border text-[10px] font-sans text-center text-muted-foreground">
-          &copy; {new Date().getFullYear()} GeekThrifts. All rights reserved.
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 mt-10 pt-6 border-t border-gray-100">
+          <p className="text-[12px] text-gray-400">&copy; {new Date().getFullYear()} GeekThrifts. All rights reserved.</p>
         </div>
       </footer>
     </div>

@@ -4,16 +4,6 @@ import { z } from "zod";
 import { useSignup } from "@workspace/api-client-react";
 import { useUserAuth } from "@/hooks/use-user-auth";
 import { Link, useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
@@ -34,19 +24,17 @@ export default function SignupPage() {
   const { toast } = useToast();
   const signupMutation = useSignup();
 
-  useEffect(() => {
-    if (isUserLoggedIn) setLocation("/");
-  }, [isUserLoggedIn, setLocation]);
-
   const form = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
   });
 
+  useEffect(() => {
+    if (isUserLoggedIn) setLocation("/");
+  }, [isUserLoggedIn, setLocation]);
+
   const onSubmit = (values: SignupValues) => {
-    signupMutation.mutate({
-      data: { name: values.name, email: values.email, password: values.password }
-    }, {
+    signupMutation.mutate({ data: { name: values.name, email: values.email, password: values.password } }, {
       onSuccess: (data) => {
         userLogin(data.token, data.user);
         toast({ title: "Account created!", description: `Welcome to GeekThrifts, ${data.user.name}.` });
@@ -54,123 +42,90 @@ export default function SignupPage() {
       },
       onError: (err: unknown) => {
         const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-        toast({
-          title: "Signup failed",
-          description: message ?? "Something went wrong. Please try again.",
-          variant: "destructive",
-        });
+        toast({ title: "Signup failed", description: message ?? "Something went wrong. Please try again.", variant: "destructive" });
       },
     });
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <Link href="/">
-            <span className="font-serif text-2xl font-bold tracking-tighter uppercase cursor-pointer hover:opacity-80 transition-opacity">GeekThrifts.</span>
-          </Link>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold mt-2">Create Your Account</p>
-        </div>
-
-        <div className="border border-border bg-card p-8 md:p-10">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" data-testid="form-signup">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Full Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Ahmed Khan"
-                        className="h-12 rounded-none border-border focus-visible:ring-foreground"
-                        data-testid="input-name"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Email Address</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="you@example.com"
-                        className="h-12 rounded-none border-border focus-visible:ring-foreground"
-                        data-testid="input-email"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Min. 6 characters"
-                        className="h-12 rounded-none border-border focus-visible:ring-foreground"
-                        data-testid="input-password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Confirm Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Re-enter your password"
-                        className="h-12 rounded-none border-border focus-visible:ring-foreground"
-                        data-testid="input-confirm-password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                className="w-full h-12 rounded-none uppercase font-bold tracking-widest text-xs mt-2"
-                disabled={signupMutation.isPending}
-                data-testid="button-signup"
-              >
-                {signupMutation.isPending ? "Creating Account..." : "Create Account"}
-              </Button>
-            </form>
-          </Form>
-
-          <div className="mt-6 text-center">
-            <p className="text-xs text-muted-foreground">
-              Already have an account?{" "}
-              <Link href="/login">
-                <span className="font-bold underline underline-offset-4 cursor-pointer hover:opacity-70 transition-opacity">Sign in</span>
-              </Link>
-            </p>
+    <div className="min-h-screen bg-white flex flex-col">
+      <div className="flex-1 flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <Link href="/">
+              <span className="font-serif text-2xl font-bold text-gray-900 cursor-pointer hover:opacity-75 transition-opacity">GeekThrifts</span>
+            </Link>
+            <p className="text-[13px] text-gray-500 mt-2">Create your account</p>
           </div>
+
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-700 mb-1.5">Full Name</label>
+              <input
+                type="text"
+                autoComplete="name"
+                placeholder="Ahmed Khan"
+                className="w-full h-11 px-4 border border-gray-200 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+                {...form.register("name")}
+              />
+              {form.formState.errors.name && (
+                <p className="text-red-500 text-[12px] mt-1">{form.formState.errors.name.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-700 mb-1.5">Email</label>
+              <input
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                className="w-full h-11 px-4 border border-gray-200 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+                {...form.register("email")}
+              />
+              {form.formState.errors.email && (
+                <p className="text-red-500 text-[12px] mt-1">{form.formState.errors.email.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-700 mb-1.5">Password</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                placeholder="Min. 6 characters"
+                className="w-full h-11 px-4 border border-gray-200 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+                {...form.register("password")}
+              />
+              {form.formState.errors.password && (
+                <p className="text-red-500 text-[12px] mt-1">{form.formState.errors.password.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-700 mb-1.5">Confirm Password</label>
+              <input
+                type="password"
+                autoComplete="new-password"
+                placeholder="Re-enter your password"
+                className="w-full h-11 px-4 border border-gray-200 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+                {...form.register("confirmPassword")}
+              />
+              {form.formState.errors.confirmPassword && (
+                <p className="text-red-500 text-[12px] mt-1">{form.formState.errors.confirmPassword.message}</p>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={signupMutation.isPending}
+              className="w-full h-11 bg-gray-900 text-white text-[12px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            >
+              {signupMutation.isPending ? "Creating Account..." : "Create Account"}
+            </button>
+          </form>
+
+          <p className="text-center text-[13px] text-gray-500 mt-6">
+            Already have an account?{" "}
+            <Link href="/login">
+              <span className="text-gray-900 font-semibold underline underline-offset-2 cursor-pointer hover:opacity-70 transition-opacity">Sign in</span>
+            </Link>
+          </p>
         </div>
       </div>
     </div>

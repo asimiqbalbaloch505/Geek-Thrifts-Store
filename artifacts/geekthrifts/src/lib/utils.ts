@@ -6,12 +6,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatPKR(amount: number) {
-  return new Intl.NumberFormat("en-PK", {
-    style: "currency",
-    currency: "PKR",
+  const formatted = new Intl.NumberFormat("en-US", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount).replace("PKR", "PKR ")
+  }).format(amount);
+  return `PKR ${formatted}`;
 }
 
 export function getImageUrl(url: string | null | undefined): string | undefined {

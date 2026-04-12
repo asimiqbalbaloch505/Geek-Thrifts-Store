@@ -1,9 +1,8 @@
 import { Layout } from "@/components/layout";
 import { useGetProduct, getGetProductQueryKey } from "@workspace/api-client-react";
-import { useParams } from "wouter";
-import { formatPKR } from "@/lib/utils";
+import { useParams, Link } from "wouter";
+import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
@@ -27,35 +26,25 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (!product) return;
     if (product.sizes?.length > 0 && !selectedSize) {
-      toast({
-        title: "Select a size",
-        description: "Please select a size before adding to cart.",
-        variant: "destructive"
-      });
+      toast({ title: "Select a size", description: "Please choose a size before adding to cart.", variant: "destructive" });
       return;
     }
-    
-    // Default size for items without sizes (like some ties)
-    const sizeToUse = selectedSize || "OS";
-    
+    const sizeToUse = selectedSize || "One Size";
     addToCart(product, sizeToUse, quantity);
-    toast({
-      title: "Added to cart",
-      description: `${quantity}x ${product.name} (${sizeToUse}) added to your cart.`
-    });
+    toast({ title: "Added to cart", description: `${quantity}x ${product.name} added to your cart.` });
   };
 
   if (isLoading) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-12 md:py-24">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
-            <Skeleton className="aspect-[3/4] w-full rounded-none" />
-            <div className="flex flex-col pt-8">
-              <Skeleton className="h-12 w-3/4 mb-4 rounded-none" />
-              <Skeleton className="h-6 w-1/4 mb-12 rounded-none" />
-              <Skeleton className="h-32 w-full mb-12 rounded-none" />
-              <Skeleton className="h-12 w-full rounded-none" />
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 md:py-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-20">
+            <Skeleton className="aspect-[3/4] w-full rounded-none bg-gray-100" />
+            <div className="flex flex-col pt-4 space-y-4">
+              <Skeleton className="h-5 w-20 rounded-none bg-gray-100" />
+              <Skeleton className="h-10 w-3/4 rounded-none bg-gray-100" />
+              <Skeleton className="h-6 w-1/4 rounded-none bg-gray-100" />
+              <Skeleton className="h-24 w-full rounded-none bg-gray-100" />
             </div>
           </div>
         </div>
@@ -66,13 +55,18 @@ export default function ProductDetail() {
   if (!product || isShoes) {
     return (
       <Layout>
-        <div className="container mx-auto px-4 py-32 text-center">
-          <h1 className="font-serif text-4xl font-bold tracking-tighter uppercase mb-4">
+        <div className="max-w-[1400px] mx-auto px-4 py-28 text-center">
+          <h1 className="font-serif text-3xl font-bold tracking-tight mb-3 text-gray-900">
             {isShoes ? "Coming Soon" : "Product Not Found"}
           </h1>
-          <p className="font-sans mb-8 text-muted-foreground">
-            {isShoes ? "Shoe collection is not available yet." : "The requested product does not exist."}
+          <p className="text-[14px] text-gray-500 mb-6">
+            {isShoes ? "Our shoe collection is being curated. Check back soon." : "This product doesn't exist or has been removed."}
           </p>
+          <Link href="/products">
+            <button className="h-10 px-8 bg-gray-900 text-white text-[12px] uppercase tracking-[0.12em] font-semibold hover:bg-gray-800 transition-colors">
+              Back to Products
+            </button>
+          </Link>
         </div>
       </Layout>
     );
@@ -80,112 +74,110 @@ export default function ProductDetail() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-12 md:py-24">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 md:py-16">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-8">
+          <Link href="/" className="hover:text-gray-700 transition-colors">Home</Link>
+          <span>/</span>
+          <Link href={`/products?category=${product.categoryName?.toLowerCase()}`} className="hover:text-gray-700 transition-colors capitalize">
+            {product.categoryName}
+          </Link>
+          <span>/</span>
+          <span className="text-gray-700 truncate">{product.name}</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-20">
           {/* Image */}
-          <div className="aspect-[3/4] border border-border bg-muted relative">
+          <div className="aspect-[3/4] bg-gray-50 relative overflow-hidden">
             {product.imageUrl ? (
-              <img 
-                src={product.imageUrl} 
-                alt={product.name} 
-                className="w-full h-full object-cover"
+              <img
+                src={getImageUrl(product.imageUrl)}
+                alt={product.name}
+                className="w-full h-full object-cover object-center"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center font-sans text-sm uppercase tracking-widest text-muted-foreground">
-                No Image Available
+              <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest">
+                No Image
               </div>
             )}
             {product.stock === 0 && (
-              <div className="absolute top-4 right-4 bg-foreground text-background px-4 py-2 font-sans font-bold text-xs uppercase tracking-widest">
-                Sold Out
+              <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                <span className="text-[13px] uppercase tracking-widest font-semibold text-gray-700">Sold Out</span>
               </div>
+            )}
+            {product.stock > 0 && product.stock <= 2 && (
+              <span className="absolute top-3 left-3 bg-gray-900 text-white text-[10px] px-2.5 py-1 uppercase tracking-wider font-semibold">
+                Last {product.stock}
+              </span>
             )}
           </div>
 
           {/* Details */}
-          <div className="flex flex-col font-sans">
-            <div className="mb-2 text-xs uppercase tracking-widest text-muted-foreground font-bold">
-              {product.categoryName}
-            </div>
-            <h1 className="font-serif text-4xl md:text-5xl font-bold tracking-tighter uppercase mb-4 leading-none">
+          <div className="flex flex-col">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-2">{product.categoryName}</p>
+            <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-gray-900 leading-tight mb-3">
               {product.name}
             </h1>
-            <div className="text-2xl font-bold mb-10 pb-10 border-b border-border">
+            <p className="text-xl font-bold text-gray-900 mb-6 pb-6 border-b border-gray-100">
               {formatPKR(product.price)}
-            </div>
+            </p>
 
-            <div className="prose prose-sm dark:prose-invert max-w-none mb-12 font-sans text-muted-foreground leading-relaxed">
-              {product.description ? (
-                <p>{product.description}</p>
-              ) : (
-                <p>A classic piece from GeekThrifts. Carefully selected, cleaned, and pressed for the modern professional.</p>
-              )}
-            </div>
+            <p className="text-[14px] text-gray-500 leading-relaxed mb-8">
+              {product.description ?? "A carefully selected piece from GeekThrifts. Authenticated, cleaned, and pressed for the modern Pakistani professional."}
+            </p>
 
-            {/* Form */}
-            <div className="space-y-8 mt-auto">
-              {product.sizes && product.sizes.length > 0 && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <label className="text-xs uppercase tracking-widest font-bold">Size</label>
-                  </div>
-                  <div className="grid grid-cols-4 gap-3">
-                    {product.sizes.map((size) => (
-                      <button
-                        key={size}
-                        onClick={() => setSelectedSize(size)}
-                        className={`h-12 border rounded-none font-bold text-sm uppercase transition-colors ${
-                          selectedSize === size 
-                            ? "bg-foreground text-background border-foreground" 
-                            : "border-border hover:border-foreground"
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="text-xs uppercase tracking-widest font-bold mb-4 block">Quantity</label>
-                <div className="flex items-center border border-border w-32 h-12">
-                  <button 
-                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className="w-10 h-full flex items-center justify-center hover:bg-muted transition-colors"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <div className="flex-1 text-center font-bold text-sm">
-                    {quantity}
-                  </div>
-                  <button 
-                    onClick={() => setQuantity(q => q + 1)}
-                    className="w-10 h-full flex items-center justify-center hover:bg-muted transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
+            {/* Sizes */}
+            {product.sizes && product.sizes.length > 0 && product.sizes[0] !== "One Size" && (
+              <div className="mb-6">
+                <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">Size</p>
+                <div className="flex flex-wrap gap-2">
+                  {product.sizes.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`h-10 min-w-[44px] px-3 border text-[12px] font-semibold uppercase transition-colors ${
+                        selectedSize === size
+                          ? "bg-gray-900 text-white border-gray-900"
+                          : "bg-white text-gray-700 border-gray-200 hover:border-gray-900"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
                 </div>
               </div>
+            )}
 
-              <Button 
-                size="lg" 
-                className="w-full h-14 rounded-none uppercase font-bold tracking-widest text-sm"
-                onClick={handleAddToCart}
-                disabled={product.stock === 0}
-              >
-                {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
-              </Button>
-              
-              <div className="pt-8 border-t border-border mt-12 grid grid-cols-2 gap-4 text-xs text-muted-foreground uppercase tracking-wider">
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-foreground">Shipping</span>
-                  <span>Nationwide Delivery</span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="font-bold text-foreground">Returns</span>
-                  <span>3-Day Policy</span>
-                </div>
+            {/* Quantity */}
+            <div className="mb-6">
+              <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">Quantity</p>
+              <div className="flex items-center border border-gray-200 w-fit">
+                <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <span className="w-10 text-center text-[14px] font-semibold">{quantity}</span>
+                <button onClick={() => setQuantity(q => Math.min(product.stock, q + 1))} className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+              className="h-12 w-full bg-gray-900 text-white text-[12px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed mb-4"
+            >
+              {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+            </button>
+
+            <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100 mt-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-900 mb-0.5">Delivery</p>
+                <p className="text-[12px] text-gray-500">Cash on Delivery, Nationwide</p>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-900 mb-0.5">Returns</p>
+                <p className="text-[12px] text-gray-500">3-Day Return Policy</p>
               </div>
             </div>
           </div>

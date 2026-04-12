@@ -4,16 +4,6 @@ import { z } from "zod";
 import { useLogin } from "@workspace/api-client-react";
 import { useUserAuth } from "@/hooks/use-user-auth";
 import { Link, useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
@@ -29,14 +19,14 @@ export default function LoginPage() {
   const { toast } = useToast();
   const loginMutation = useLogin();
 
-  useEffect(() => {
-    if (isUserLoggedIn) setLocation("/");
-  }, [isUserLoggedIn, setLocation]);
-
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
+
+  useEffect(() => {
+    if (isUserLoggedIn) setLocation("/");
+  }, [isUserLoggedIn, setLocation]);
 
   const onSubmit = (values: LoginValues) => {
     loginMutation.mutate({ data: values }, {
@@ -52,76 +42,58 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <Link href="/">
-            <span className="font-serif text-2xl font-bold tracking-tighter uppercase cursor-pointer hover:opacity-80 transition-opacity">GeekThrifts.</span>
-          </Link>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold mt-2">Sign In to Your Account</p>
-        </div>
-
-        <div className="border border-border bg-card p-8 md:p-10">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" data-testid="form-login">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Email Address</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="you@example.com"
-                        className="h-12 rounded-none border-border focus-visible:ring-foreground"
-                        data-testid="input-email"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        className="h-12 rounded-none border-border focus-visible:ring-foreground"
-                        data-testid="input-password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                className="w-full h-12 rounded-none uppercase font-bold tracking-widest text-xs mt-2"
-                disabled={loginMutation.isPending}
-                data-testid="button-login"
-              >
-                {loginMutation.isPending ? "Signing In..." : "Sign In"}
-              </Button>
-            </form>
-          </Form>
-
-          <div className="mt-6 text-center">
-            <p className="text-xs text-muted-foreground">
-              Don't have an account?{" "}
-              <Link href="/signup">
-                <span className="font-bold underline underline-offset-4 cursor-pointer hover:opacity-70 transition-opacity">Create one</span>
-              </Link>
-            </p>
+    <div className="min-h-screen bg-white flex flex-col">
+      <div className="flex-1 flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <Link href="/">
+              <span className="font-serif text-2xl font-bold text-gray-900 cursor-pointer hover:opacity-75 transition-opacity">GeekThrifts</span>
+            </Link>
+            <p className="text-[13px] text-gray-500 mt-2">Sign in to your account</p>
           </div>
+
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div>
+              <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-700 mb-1.5">Email</label>
+              <input
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                className="w-full h-11 px-4 border border-gray-200 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+                {...form.register("email")}
+              />
+              {form.formState.errors.email && (
+                <p className="text-red-500 text-[12px] mt-1">{form.formState.errors.email.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-700 mb-1.5">Password</label>
+              <input
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                className="w-full h-11 px-4 border border-gray-200 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+                {...form.register("password")}
+              />
+              {form.formState.errors.password && (
+                <p className="text-red-500 text-[12px] mt-1">{form.formState.errors.password.message}</p>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={loginMutation.isPending}
+              className="w-full h-11 bg-gray-900 text-white text-[12px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            >
+              {loginMutation.isPending ? "Signing In..." : "Sign In"}
+            </button>
+          </form>
+
+          <p className="text-center text-[13px] text-gray-500 mt-6">
+            Don't have an account?{" "}
+            <Link href="/signup">
+              <span className="text-gray-900 font-semibold underline underline-offset-2 cursor-pointer hover:opacity-70 transition-opacity">Create one</span>
+            </Link>
+          </p>
         </div>
       </div>
     </div>

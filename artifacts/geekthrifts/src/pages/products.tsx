@@ -3,7 +3,6 @@ import { useListProducts, getListProductsQueryKey, useListCategories, getListCat
 import { Link, useSearch } from "wouter";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 
 export default function Products() {
   const searchString = useSearch();
@@ -36,51 +35,48 @@ export default function Products() {
     categoryParam?.toLowerCase() === "shoes" ||
     (categoryId && categories?.find(c => c.id === categoryId)?.name.toLowerCase() === "shoes");
 
-  const activeCategory = categoryId
-    ? categories?.find(c => c.id === categoryId)
-    : null;
-
-  const pageTitle = activeCategory?.name ?? (categoryParam ? categoryParam : "All");
+  const activeCategory = categoryId ? categories?.find(c => c.id === categoryId) : null;
+  const pageTitle = activeCategory?.name ?? (categoryParam ? categoryParam : "All Products");
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-10 md:py-16">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 md:py-12">
 
-        {/* Header */}
-        <div className="flex items-baseline justify-between border-b border-border pb-5 mb-8">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.35em] text-muted-foreground font-bold mb-1">
-              {categoryParam ? "Category" : "Collection"}
-            </p>
-            <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight capitalize">
-              {pageTitle}
-            </h1>
-          </div>
-          <span className="font-sans text-xs text-muted-foreground">
-            {!isShoesSelected ? `${products?.length ?? 0} items` : ""}
-          </span>
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-6">
+          <Link href="/" className="hover:text-gray-700 transition-colors">Home</Link>
+          <span>/</span>
+          <span className="text-gray-700 capitalize">{pageTitle}</span>
+        </div>
+
+        {/* Page header */}
+        <div className="flex items-end justify-between mb-6 pb-4 border-b border-gray-100">
+          <h1 className="font-serif text-2xl md:text-3xl font-bold text-gray-900 tracking-tight capitalize">
+            {pageTitle}
+          </h1>
+          {!isShoesSelected && (
+            <span className="text-[13px] text-gray-400">{products?.length ?? 0} Items</span>
+          )}
         </div>
 
         {/* Filter pills */}
-        <div className="flex flex-wrap gap-2 mb-8 font-sans text-xs">
+        <div className="flex flex-wrap gap-2 mb-8">
           <Link href="/products">
-            <button className={`h-8 px-4 border uppercase tracking-widest font-bold transition-colors ${!categoryParam ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"}`}>
+            <button className={`h-8 px-4 text-[12px] font-semibold uppercase tracking-[0.1em] transition-colors border ${!categoryParam ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-700 hover:text-gray-900"}`}>
               All
             </button>
           </Link>
           {categories?.map(cat => {
             const isShoes = cat.slug === "shoes" || cat.name.toLowerCase() === "shoes";
             const isActive = categoryParam === cat.slug || categoryId === cat.id;
-            if (isShoes) {
-              return (
-                <button key={cat.id} disabled className="h-8 px-4 border border-border uppercase tracking-widest font-bold text-muted-foreground cursor-not-allowed opacity-40">
-                  {cat.name}
-                </button>
-              );
-            }
+            if (isShoes) return (
+              <button key={cat.id} disabled className="h-8 px-4 text-[12px] font-semibold uppercase tracking-[0.1em] border border-gray-100 text-gray-300 cursor-not-allowed">
+                {cat.name}
+              </button>
+            );
             return (
               <Link key={cat.id} href={`/products?category=${cat.slug}`}>
-                <button className={`h-8 px-4 border uppercase tracking-widest font-bold transition-colors ${isActive ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:border-foreground hover:text-foreground"}`}>
+                <button className={`h-8 px-4 text-[12px] font-semibold uppercase tracking-[0.1em] transition-colors border ${isActive ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-700 hover:text-gray-900"}`}>
                   {cat.name}
                 </button>
               </Link>
@@ -88,64 +84,69 @@ export default function Products() {
           })}
         </div>
 
+        {/* Content */}
         {isShoesSelected ? (
-          <div className="py-32 text-center border border-border flex flex-col items-center justify-center">
-            <h2 className="font-serif text-4xl font-bold tracking-tight mb-3">Coming Soon</h2>
-            <p className="font-sans text-sm text-muted-foreground max-w-sm mx-auto">
-              Our formal footwear collection is being curated. Check back soon for oxfords, loafers, and more.
+          <div className="py-28 text-center bg-gray-50 border border-gray-100">
+            <h2 className="font-serif text-3xl font-bold mb-3">Coming Soon</h2>
+            <p className="text-[14px] text-gray-500 max-w-sm mx-auto">
+              Formal footwear — oxfords, loafers — currently being curated. Check back soon.
             </p>
           </div>
         ) : isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-            {Array(6).fill(0).map((_, i) => (
-              <div key={i} className="flex flex-col gap-3">
-                <Skeleton className="aspect-[2/3] w-full rounded-none bg-card" />
-                <Skeleton className="h-3.5 w-3/4 rounded-none bg-card" />
-                <Skeleton className="h-3 w-1/2 rounded-none bg-card" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
+            {Array(8).fill(0).map((_, i) => (
+              <div key={i}>
+                <Skeleton className="aspect-[3/4] w-full rounded-none bg-gray-100" />
+                <div className="mt-3 space-y-1.5">
+                  <Skeleton className="h-3.5 w-4/5 rounded-none bg-gray-100" />
+                  <Skeleton className="h-3 w-1/2 rounded-none bg-gray-100" />
+                </div>
               </div>
             ))}
           </div>
         ) : products && products.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
             {products.map((product) => (
-              <Link key={product.id} href={`/products/${product.id}`} className="group flex flex-col">
-                <div className="aspect-[2/3] overflow-hidden bg-card border border-border relative mb-3">
+              <Link key={product.id} href={`/products/${product.id}`} className="product-card group block">
+                <div className="relative overflow-hidden bg-gray-50 aspect-[3/4]">
                   {product.imageUrl ? (
                     <img
                       src={getImageUrl(product.imageUrl)}
                       alt={product.name}
-                      className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
+                      className="product-card-img w-full h-full object-cover object-center"
                       loading="lazy"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs uppercase tracking-widest">
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest">
                       No Image
                     </div>
                   )}
                   {product.stock === 0 && (
-                    <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-                      <span className="font-bold text-xs uppercase tracking-widest">Sold Out</span>
+                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                      <span className="text-[11px] uppercase tracking-widest font-semibold text-gray-600">Sold Out</span>
                     </div>
                   )}
                   {product.stock > 0 && product.stock <= 2 && (
-                    <div className="absolute top-2 left-2 bg-background/90 px-2 py-0.5">
-                      <span className="font-sans text-[10px] uppercase tracking-widest font-bold">Last {product.stock}</span>
-                    </div>
+                    <span className="absolute top-2 left-2 bg-gray-900 text-white text-[10px] px-2 py-0.5 uppercase tracking-wider font-semibold">
+                      Last {product.stock}
+                    </span>
                   )}
                 </div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-0.5">{product.categoryName}</p>
-                <h3 className="font-serif text-sm font-bold leading-tight mb-1 group-hover:opacity-70 transition-opacity">{product.name}</h3>
-                <p className="font-sans text-sm font-bold">{formatPKR(product.price)}</p>
+                <div className="mt-2.5 space-y-0.5">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-widest font-medium">{product.categoryName}</p>
+                  <h3 className="text-[13px] font-semibold text-gray-900 leading-snug group-hover:text-gray-500 transition-colors">{product.name}</h3>
+                  <p className="text-[13px] font-bold text-gray-900">{formatPKR(product.price)}</p>
+                </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="py-32 text-center border border-border flex flex-col items-center gap-4">
-            <p className="font-sans text-sm text-muted-foreground">No products found.</p>
+          <div className="py-24 text-center bg-gray-50 border border-gray-100">
+            <p className="text-[14px] text-gray-500 mb-4">No products found in this category.</p>
             <Link href="/products">
-              <Button className="rounded-none uppercase font-bold tracking-widest text-xs h-10 px-6">
-                View All
-              </Button>
+              <button className="h-10 px-6 bg-gray-900 text-white text-[12px] uppercase tracking-[0.12em] font-semibold hover:bg-gray-800 transition-colors">
+                Clear Filter
+              </button>
             </Link>
           </div>
         )}
