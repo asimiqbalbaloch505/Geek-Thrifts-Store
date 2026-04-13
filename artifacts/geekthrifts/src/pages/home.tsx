@@ -51,6 +51,20 @@ const HERO_SLIDES = [
   },
 ];
 
+const TIE_BRANDS: Record<string, string[]> = {
+  "Italian": ["Armani", "Dolce & Gabbana", "Ermenegildo Zegna", "Etro", "Ferragamo", "Gucci", "Kiton", "Lardini", "Missoni", "Versace", "Tom Ford", "Marinella", "Sartorio Napoli"],
+  "French": ["Christian Dior", "Hermès", "Jean Paul Gaultier", "Lanvin", "Louis Vuitton", "Yves Saint Laurent"],
+  "UK": ["Burberry", "Drake's", "Paul Smith", "Reiss", "Charles Tyrwhitt", "Anderson & Sheppard"],
+  "USA": ["Brooks Brothers", "Ralph Lauren", "Tom Ford"],
+};
+
+const SHIRT_BRANDS: Record<string, string[]> = {
+  "Italian": ["Armani", "Brioni", "Canali", "Kiton", "Luigi Borrelli", "Ermenegildo Zegna"],
+  "French": ["Christian Dior", "Lanvin"],
+  "UK": ["Burberry", "Thomas Pink", "Turnbull & Asser", "Charles Tyrwhitt"],
+  "USA": ["Ralph Lauren", "Brooks Brothers"],
+};
+
 const INTERVAL = 4500;
 
 export default function Home() {
@@ -62,23 +76,19 @@ export default function Home() {
   const featured = allProducts?.filter(p => p.isFeatured && p.isActive) ?? [];
 
   const [current, setCurrent] = useState(0);
-  const [fading, setFading] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
 
   const goTo = useCallback((idx: number) => {
-    setFading(true);
+    if (transitioning) return;
+    setTransitioning(true);
     setTimeout(() => {
       setCurrent(idx);
-      setFading(false);
-    }, 400);
-  }, []);
+      setTransitioning(false);
+    }, 600);
+  }, [transitioning]);
 
-  const next = useCallback(() => {
-    goTo((current + 1) % HERO_SLIDES.length);
-  }, [current, goTo]);
-
-  const prev = useCallback(() => {
-    goTo((current - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
-  }, [current, goTo]);
+  const next = useCallback(() => goTo((current + 1) % HERO_SLIDES.length), [current, goTo]);
+  const prev = useCallback(() => goTo((current - 1 + HERO_SLIDES.length) % HERO_SLIDES.length), [current, goTo]);
 
   useEffect(() => {
     const t = setInterval(next, INTERVAL);
@@ -89,109 +99,196 @@ export default function Home() {
 
   return (
     <Layout>
-      {/* ── Hero Carousel ── */}
-      <section className="relative flex flex-col md:flex-row overflow-hidden" style={{ minHeight: "88vh" }}>
 
-        {/* Left: text panel */}
-        <div
-          className="flex flex-col justify-center px-8 md:px-16 lg:px-24 py-16 md:py-0 bg-white z-10 relative"
-          style={{ flex: "0 0 52%" }}
-        >
-          {/* Brand tag */}
+      {/* ── Full-Screen Background Hero ── */}
+      <section className="relative overflow-hidden" style={{ minHeight: "92vh" }}>
+
+        {/* Background images — stacked, crossfade */}
+        {HERO_SLIDES.map((s, i) => (
           <div
-            className="mb-5 transition-all duration-500"
-            style={{ opacity: fading ? 0 : 1, transform: fading ? "translateY(8px)" : "translateY(0)" }}
+            key={i}
+            className="absolute inset-0 transition-opacity duration-1000"
+            style={{ opacity: i === current ? 1 : 0 }}
           >
-            <span className="inline-block text-[10px] font-semibold uppercase tracking-[0.35em] text-gray-400 border border-gray-200 px-3 py-1">
-              {slide.tag}
-            </span>
+            <img
+              src={getImageUrl(s.image)}
+              alt={s.tag}
+              className="w-full h-full object-cover object-center"
+              loading={i === 0 ? "eager" : "lazy"}
+            />
           </div>
+        ))}
 
-          {/* Headline */}
-          <h1
-            className="font-serif font-bold text-gray-900 leading-none tracking-tight mb-5 transition-all duration-500"
-            style={{
-              fontSize: "clamp(3rem, 7vw, 5.5rem)",
-              whiteSpace: "pre-line",
-              opacity: fading ? 0 : 1,
-              transform: fading ? "translateY(12px)" : "translateY(0)",
-            }}
-          >
-            {slide.headline}
-          </h1>
+        {/* Gradient overlay — left-heavy so text stays readable */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "linear-gradient(105deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.70) 45%, rgba(0,0,0,0.25) 100%)",
+          }}
+        />
 
-          {/* Subline */}
-          <p
-            className="text-[15px] text-gray-500 leading-relaxed max-w-xs mb-8 transition-all duration-500"
-            style={{ opacity: fading ? 0 : 1, transform: fading ? "translateY(8px)" : "translateY(0)" }}
-          >
-            {slide.sub}
-          </p>
+        {/* Content */}
+        <div className="relative z-10 h-full flex flex-col justify-center px-8 md:px-16 lg:px-24 py-20" style={{ minHeight: "92vh" }}>
+          <div className="max-w-xl">
 
-          {/* CTA buttons */}
-          <div className="flex items-center gap-3 mb-10">
-            <Link href={slide.cta.href}>
-              <button className="h-11 px-8 bg-gray-900 text-white text-[11px] uppercase tracking-[0.18em] font-semibold hover:bg-gray-700 transition-colors">
-                {slide.cta.label}
-              </button>
-            </Link>
-            <Link href="/products">
-              <button className="h-11 px-7 bg-white text-gray-900 text-[11px] uppercase tracking-[0.18em] font-semibold border border-gray-300 hover:border-gray-900 transition-colors">
-                All Products
-              </button>
-            </Link>
-          </div>
-
-          {/* Dot indicators + arrows */}
-          <div className="flex items-center gap-4">
-            <button onClick={prev} className="w-8 h-8 border border-gray-200 flex items-center justify-center hover:border-gray-900 transition-colors" aria-label="Previous">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="flex gap-1.5">
-              {HERO_SLIDES.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goTo(i)}
-                  aria-label={`Slide ${i + 1}`}
-                  className={`transition-all duration-300 rounded-full ${i === current ? "w-6 h-1.5 bg-gray-900" : "w-1.5 h-1.5 bg-gray-300"}`}
-                />
-              ))}
+            {/* Brand tag */}
+            <div
+              className="mb-5 transition-all duration-500"
+              style={{ opacity: transitioning ? 0 : 1, transform: transitioning ? "translateY(6px)" : "translateY(0)" }}
+            >
+              <span className="inline-block text-[10px] font-semibold uppercase tracking-[0.4em] text-white/60 border border-white/25 px-3 py-1">
+                {slide.tag}
+              </span>
             </div>
-            <button onClick={next} className="w-8 h-8 border border-gray-200 flex items-center justify-center hover:border-gray-900 transition-colors" aria-label="Next">
-              <ChevronRight className="w-4 h-4" />
-            </button>
+
+            {/* Headline */}
+            <h1
+              className="font-serif font-bold text-white leading-none tracking-tight mb-5 transition-all duration-500"
+              style={{
+                fontSize: "clamp(3.5rem, 8vw, 6rem)",
+                whiteSpace: "pre-line",
+                opacity: transitioning ? 0 : 1,
+                transform: transitioning ? "translateY(14px)" : "translateY(0)",
+              }}
+            >
+              {slide.headline}
+            </h1>
+
+            {/* Subline */}
+            <p
+              className="text-[15px] text-white/65 leading-relaxed max-w-sm mb-8 transition-all duration-500"
+              style={{ opacity: transitioning ? 0 : 1, transform: transitioning ? "translateY(8px)" : "translateY(0)" }}
+            >
+              {slide.sub}
+            </p>
+
+            {/* CTA */}
+            <div className="flex items-center gap-3 mb-10">
+              <Link href={slide.cta.href}>
+                <button className="h-11 px-8 bg-white text-gray-900 text-[11px] uppercase tracking-[0.18em] font-bold hover:bg-gray-100 transition-colors">
+                  {slide.cta.label}
+                </button>
+              </Link>
+              <Link href="/products">
+                <button className="h-11 px-7 bg-transparent text-white text-[11px] uppercase tracking-[0.18em] font-semibold border border-white/40 hover:border-white transition-colors">
+                  All Products
+                </button>
+              </Link>
+            </div>
+
+            {/* Dots + arrows */}
+            <div className="flex items-center gap-4">
+              <button onClick={prev} className="w-8 h-8 border border-white/30 flex items-center justify-center hover:border-white transition-colors text-white" aria-label="Previous">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex gap-1.5">
+                {HERO_SLIDES.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => goTo(i)}
+                    aria-label={`Slide ${i + 1}`}
+                    className={`transition-all duration-300 rounded-full ${i === current ? "w-6 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/40"}`}
+                  />
+                ))}
+              </div>
+              <button onClick={next} className="w-8 h-8 border border-white/30 flex items-center justify-center hover:border-white transition-colors text-white" aria-label="Next">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Right: rotating image */}
-        <div className="relative flex-1 bg-gray-100 min-h-[50vw] md:min-h-0 overflow-hidden">
-          {HERO_SLIDES.map((s, i) => (
-            <div
-              key={i}
-              className="absolute inset-0 transition-opacity duration-700"
-              style={{ opacity: i === current ? 1 : 0 }}
-            >
-              <img
-                src={getImageUrl(s.image)}
-                alt={s.tag}
-                className="w-full h-full object-cover object-center"
-                loading={i === 0 ? "eager" : "lazy"}
-              />
+        {/* Slide counter */}
+        <div className="absolute bottom-6 right-6 z-10 text-[11px] font-semibold text-white/50 tracking-widest">
+          {String(current + 1).padStart(2, "0")} / {String(HERO_SLIDES.length).padStart(2, "0")}
+        </div>
+      </section>
+
+      {/* ── Shop by Category ── */}
+      <section className="py-16 px-4 max-w-[1400px] mx-auto w-full">
+        <h2 className="font-serif text-2xl font-bold text-gray-900 tracking-tight mb-8">Shop by Category</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* Shirts */}
+          <div className="border border-gray-100 p-6 md:p-8 flex flex-col gap-6">
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif text-xl font-bold text-gray-900">Shirts</h3>
+              <Link href="/products?category=shirts">
+                <button className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 hover:text-black transition-colors">
+                  Shop All <ArrowRight className="w-3 h-3" />
+                </button>
+              </Link>
             </div>
-          ))}
 
-          {/* Subtle dark gradient at bottom */}
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+            <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+              {Object.entries(SHIRT_BRANDS).map(([region, brands]) => (
+                <div key={region}>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-2 pb-1 border-b border-gray-100">
+                    {region}
+                  </p>
+                  <ul className="space-y-1">
+                    {brands.map(brand => (
+                      <li key={brand}>
+                        <Link href="/products?category=shirts">
+                          <span className="text-[12px] text-gray-600 hover:text-black transition-colors cursor-pointer">{brand}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
 
-          {/* Slide counter */}
-          <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur-sm px-2.5 py-1 text-[11px] font-semibold text-gray-700 tracking-wide">
-            {String(current + 1).padStart(2, "0")} / {String(HERO_SLIDES.length).padStart(2, "0")}
+            <Link href="/products?category=shirts">
+              <button className="mt-auto h-10 w-full border border-gray-900 text-gray-900 text-[11px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-900 hover:text-white transition-colors">
+                Browse Shirts
+              </button>
+            </Link>
           </div>
+
+          {/* Ties */}
+          <div className="border border-gray-100 p-6 md:p-8 flex flex-col gap-6">
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif text-xl font-bold text-gray-900">Ties</h3>
+              <Link href="/products?category=ties">
+                <button className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 hover:text-black transition-colors">
+                  Shop All <ArrowRight className="w-3 h-3" />
+                </button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+              {Object.entries(TIE_BRANDS).map(([region, brands]) => (
+                <div key={region}>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-2 pb-1 border-b border-gray-100">
+                    {region}
+                  </p>
+                  <ul className="space-y-1">
+                    {brands.map(brand => (
+                      <li key={brand}>
+                        <Link href="/products?category=ties">
+                          <span className="text-[12px] text-gray-600 hover:text-black transition-colors cursor-pointer">{brand}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <Link href="/products?category=ties">
+              <button className="mt-auto h-10 w-full border border-gray-900 text-gray-900 text-[11px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-900 hover:text-white transition-colors">
+                Browse Ties
+              </button>
+            </Link>
+          </div>
+
         </div>
       </section>
 
       {/* ── Featured Products ── */}
-      <section className="py-14 md:py-20 px-4 max-w-[1400px] mx-auto w-full">
+      <section className="py-6 pb-16 px-4 max-w-[1400px] mx-auto w-full">
         <div className="flex items-center justify-between mb-8">
           <h2 className="font-serif text-2xl font-bold text-gray-900 tracking-tight">Featured</h2>
           <Link href="/products" className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-[0.1em] text-gray-500 hover:text-black transition-colors">
@@ -220,9 +317,7 @@ export default function Home() {
                         className="product-card-img w-full h-full object-cover object-center"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest">
-                        No Image
-                      </div>
+                      <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest">No Image</div>
                     )}
                     {product.stock === 0 && (
                       <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
@@ -263,6 +358,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
     </Layout>
   );
 }
