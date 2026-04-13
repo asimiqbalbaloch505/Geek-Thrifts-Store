@@ -1,7 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useCart } from "@/hooks/use-cart";
 import { useUserAuth } from "@/hooks/use-user-auth";
-import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
 import { getImageUrl } from "@/lib/utils";
 import { Menu, X, ShoppingBag, User, LogOut, ChevronDown } from "lucide-react";
 import { useState, useRef } from "react";
@@ -12,55 +11,193 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
 
-const CATEGORY_SLUGS = [
-  { label: "Shirts", slug: "shirts", coming: false },
-  { label: "Ties", slug: "ties", coming: false },
-  { label: "Shoes", slug: "shoes", coming: false },
-];
+/* ────────────────────────────────────────────────
+   Brand subcategories (shown in the mega-menu)
+──────────────────────────────────────────────── */
+const TIE_BRANDS: Record<string, string[]> = {
+  "Italian": [
+    "Armani", "Dolce & Gabbana", "Ermenegildo Zegna", "Etro", "Ferragamo",
+    "Gucci", "Kiton", "Missoni", "Versace", "Tom Ford", "Lardini",
+    "Luigi Borrelli", "Marinella", "Sartorio Napoli",
+  ],
+  "French": [
+    "Christian Dior", "Hermès", "Jean Paul Gaultier",
+    "Lanvin", "Louis Vuitton", "Yves Saint Laurent",
+  ],
+  "UK": [
+    "Burberry", "Drake's", "Paul Smith", "Reiss",
+    "Charles Tyrwhitt", "Anderson & Sheppard",
+  ],
+  "USA": ["Brooks Brothers", "Ralph Lauren", "Tom Ford"],
+};
 
-function CategoryMegaNav({ label, slug, coming }: { label: string; slug: string; coming: boolean }) {
+const SHIRT_BRANDS: Record<string, string[]> = {
+  "Italian": ["Armani", "Brioni", "Canali", "Kiton", "Luigi Borrelli", "Ermenegildo Zegna"],
+  "French": ["Christian Dior", "Lanvin"],
+  "UK": ["Burberry", "Thomas Pink", "Turnbull & Asser", "Charles Tyrwhitt"],
+  "USA": ["Ralph Lauren", "Brooks Brothers"],
+};
+
+const BRAND_MAP: Record<string, Record<string, string[]>> = {
+  ties: TIE_BRANDS,
+  shirts: SHIRT_BRANDS,
+};
+
+/* ────────────────────────────────────────────────
+   Mega-menu component
+──────────────────────────────────────────────── */
+function CategoryMegaNav({ label, slug }: { label: string; slug: string }) {
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: products } = useListProducts(undefined, {
     query: { queryKey: getListProductsQueryKey() }
   });
-  const items = products?.filter(p => p.isActive && p.categoryName?.toLowerCase() === label.toLowerCase()).slice(0, 4) ?? [];
 
-  if (coming) {
-    return (
-      <span className="text-sm text-gray-400 cursor-not-allowed tracking-wide">
-        {label}
-        <span className="ml-1 text-[10px] font-medium uppercase tracking-widest align-middle">Soon</span>
-      </span>
-    );
-  }
+  const featuredItems = products
+    ?.filter(p => p.isActive && p.categoryName?.toLowerCase() === label.toLowerCase())
+    .slice(0, 3) ?? [];
+
+  const brands = BRAND_MAP[slug];
 
   const handleMouseEnter = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setOpen(true);
   };
   const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => setOpen(false), 120);
+    timeoutRef.current = setTimeout(() => setOpen(false), 140);
   };
 
   return (
     <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
       <Link href={`/products?category=${slug}`}>
-        <button className={`flex items-center gap-0.5 text-sm font-medium tracking-wide hover:text-black transition-colors py-2 group ${open ? "text-black" : "text-gray-700"}`}>
+        <button
+          className={`flex items-center gap-0.5 text-sm font-medium tracking-wide hover:text-black transition-colors py-2 ${open ? "text-black" : "text-gray-700"}`}
+        >
           {label}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+        </button>
+      </Link>
+
+      {open && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
+          <div className="bg-white border border-gray-100 shadow-lg" style={{ width: "640px" }}>
+            <div className="grid grid-cols-3 gap-0">
+
+              {/* Column 1 & 2: Brand subcategories */}
+              <div className="col-span-2 p-5 border-r border-gray-100">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-4">
+                  Shop by Brand
+                </p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  {brands && Object.entries(brands).map(([region, brandList]) => (
+                    <div key={region}>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-500 mb-1.5 border-b border-gray-100 pb-1">
+                        {region}
+                      </p>
+                      <ul className="space-y-1">
+                        {brandList.map(brand => (
+                          <li key={brand}>
+                            <Link href={`/products?category=${slug}`}>
+                              <span className="text-[12px] text-gray-600 hover:text-black transition-colors cursor-pointer">
+                                {brand}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 pt-3 border-t border-gray-100">
+                  <Link href={`/products?category=${slug}`}>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-900 hover:text-gray-600 transition-colors flex items-center gap-1">
+                      View All {label}
+                      <span className="text-gray-400">&rarr;</span>
+                    </span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Column 3: Featured products */}
+              <div className="p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-3">
+                  Featured
+                </p>
+                <div className="space-y-3">
+                  {featuredItems.map(p => (
+                    <Link key={p.id} href={`/products/${p.id}`}>
+                      <div className="flex items-center gap-2.5 group cursor-pointer">
+                        {p.imageUrl && (
+                          <div className="w-9 h-11 flex-shrink-0 overflow-hidden bg-gray-50">
+                            <img
+                              src={getImageUrl(p.imageUrl)}
+                              alt={p.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold text-gray-900 leading-tight truncate group-hover:text-gray-500 transition-colors">
+                            {p.name}
+                          </p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">
+                            PKR {Number(p.price).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────
+   Shoes: simple dropdown (no brand mega)
+──────────────────────────────────────────────── */
+function ShoesNav() {
+  const [open, setOpen] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data: products } = useListProducts(undefined, {
+    query: { queryKey: getListProductsQueryKey() }
+  });
+
+  const items = products?.filter(p => p.isActive && p.categoryName?.toLowerCase() === "shoes").slice(0, 4) ?? [];
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setOpen(true);
+  };
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => setOpen(false), 140);
+  };
+
+  return (
+    <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+      <Link href="/products?category=shoes">
+        <button className={`flex items-center gap-0.5 text-sm font-medium tracking-wide hover:text-black transition-colors py-2 ${open ? "text-black" : "text-gray-700"}`}>
+          Shoes
           <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
         </button>
       </Link>
 
       {open && items.length > 0 && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
-          <div className="bg-white border border-gray-100 shadow-sm min-w-[240px]">
+          <div className="bg-white border border-gray-100 shadow-sm min-w-[220px]">
             <div className="p-3 border-b border-gray-100">
-              <Link href={`/products?category=${slug}`}>
+              <Link href="/products?category=shoes">
                 <span className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-500 hover:text-black transition-colors">
-                  All {label} ({items.length}+)
+                  All Shoes ({items.length}+)
                 </span>
               </Link>
             </div>
@@ -68,13 +205,13 @@ function CategoryMegaNav({ label, slug, coming }: { label: string; slug: string;
               <Link key={p.id} href={`/products/${p.id}`}>
                 <div className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors cursor-pointer">
                   {p.imageUrl && (
-                    <div className="w-9 h-11 flex-shrink-0 overflow-hidden bg-gray-100">
+                    <div className="w-9 h-9 flex-shrink-0 overflow-hidden bg-gray-100">
                       <img src={getImageUrl(p.imageUrl)} alt={p.name} className="w-full h-full object-cover object-center" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-medium text-gray-900 truncate leading-tight">{p.name}</p>
-                    <p className="text-[12px] text-gray-500 mt-0.5">PKR {Number(p.price).toLocaleString()}</p>
+                    <p className="text-[12px] font-medium text-gray-900 truncate">{p.name}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">PKR {Number(p.price).toLocaleString()}</p>
                   </div>
                 </div>
               </Link>
@@ -86,6 +223,9 @@ function CategoryMegaNav({ label, slug, coming }: { label: string; slug: string;
   );
 }
 
+/* ────────────────────────────────────────────────
+   Main layout
+──────────────────────────────────────────────── */
 export function Layout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const { totalItems } = useCart();
@@ -95,11 +235,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900 font-sans">
 
-      {/* Top announcement bar */}
+      {/* Announcement bar */}
       <div className="bg-gray-900 text-white text-center py-2 px-4 text-[11px] tracking-widest uppercase font-medium">
-        Free Cash on Delivery — Karachi, Lahore & Islamabad
+        Free Cash on Delivery — Karachi, Lahore &amp; Islamabad
       </div>
 
+      {/* Header */}
       <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100">
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 h-16 flex items-center gap-8">
 
@@ -113,9 +254,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Link href="/" className={`text-sm font-medium tracking-wide transition-colors ${location === "/" ? "text-black" : "text-gray-600 hover:text-black"}`}>
               Home
             </Link>
-            {CATEGORY_SLUGS.map(cat => (
-              <CategoryMegaNav key={cat.slug} {...cat} />
-            ))}
+            <CategoryMegaNav label="Shirts" slug="shirts" />
+            <CategoryMegaNav label="Ties" slug="ties" />
+            <ShoesNav />
           </nav>
 
           {/* Right icons */}
@@ -169,7 +310,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Link href="/" onClick={() => setIsOpen(false)} className="text-sm font-medium text-gray-900">Home</Link>
             <Link href="/products?category=shirts" onClick={() => setIsOpen(false)} className="text-sm font-medium text-gray-900">Shirts</Link>
             <Link href="/products?category=ties" onClick={() => setIsOpen(false)} className="text-sm font-medium text-gray-900">Ties</Link>
-            <span className="text-sm text-gray-400">Shoes — Coming Soon</span>
+            <Link href="/products?category=shoes" onClick={() => setIsOpen(false)} className="text-sm font-medium text-gray-900">Shoes</Link>
             <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
               {isUserLoggedIn && user ? (
                 <button className="text-left text-sm font-medium text-gray-900" onClick={() => { userLogout(); setIsOpen(false); }}>Sign Out</button>
@@ -202,6 +343,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <li><Link href="/products" className="text-[13px] text-gray-500 hover:text-black transition-colors">All Products</Link></li>
               <li><Link href="/products?category=shirts" className="text-[13px] text-gray-500 hover:text-black transition-colors">Shirts</Link></li>
               <li><Link href="/products?category=ties" className="text-[13px] text-gray-500 hover:text-black transition-colors">Ties</Link></li>
+              <li><Link href="/products?category=shoes" className="text-[13px] text-gray-500 hover:text-black transition-colors">Shoes</Link></li>
             </ul>
           </div>
           <div>

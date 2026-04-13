@@ -3,7 +3,55 @@ import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-
 import { Link } from "wouter";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+
+const HERO_SLIDES = [
+  {
+    image: "/products/bsl-celtic-1.jpg",
+    tag: "BSL Celtic",
+    headline: "Dressed\nto Last.",
+    sub: "Designer ties from Europe's finest labels, curated for Pakistan.",
+    cta: { label: "Shop Ties", href: "/products?category=ties" },
+  },
+  {
+    image: "/products/burberry-stripe-1.jpg",
+    tag: "Burberry London",
+    headline: "British\nHeritage.",
+    sub: "Authentic Burberry silks — authenticated, pressed, and priced fairly.",
+    cta: { label: "Shop Burberry", href: "/products?category=ties" },
+  },
+  {
+    image: "/products/polo-stripe-1.jpg",
+    tag: "Polo Ralph Lauren",
+    headline: "Classic\nAmerica.",
+    sub: "Iconic Ralph Lauren stripes — timeless style for the modern professional.",
+    cta: { label: "View Collection", href: "/products?category=ties" },
+  },
+  {
+    image: "/products/burberry-rose-full.jpg",
+    tag: "Burberry London",
+    headline: "Bold\nColour.",
+    sub: "Rare colourways from the world's most recognisable luxury houses.",
+    cta: { label: "Shop Now", href: "/products?category=ties" },
+  },
+  {
+    image: "/products/maroon-gold-full.jpg",
+    tag: "Regimental Stripe",
+    headline: "Power\nDressing.",
+    sub: "Rich maroon and gold — every thread a statement of intent.",
+    cta: { label: "Explore Ties", href: "/products?category=ties" },
+  },
+  {
+    image: "/products/copper-dot-full.jpg",
+    tag: "Polka Dot Silk",
+    headline: "Subtle\nLuxury.",
+    sub: "Copper silk with navy dots — old-school elegance, always in season.",
+    cta: { label: "Shop Collection", href: "/products?category=ties" },
+  },
+];
+
+const INTERVAL = 4500;
 
 export default function Home() {
   const { data: allProducts, isLoading } = useListProducts(
@@ -13,36 +61,136 @@ export default function Home() {
 
   const featured = allProducts?.filter(p => p.isFeatured && p.isActive) ?? [];
 
+  const [current, setCurrent] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  const goTo = useCallback((idx: number) => {
+    setFading(true);
+    setTimeout(() => {
+      setCurrent(idx);
+      setFading(false);
+    }, 400);
+  }, []);
+
+  const next = useCallback(() => {
+    goTo((current + 1) % HERO_SLIDES.length);
+  }, [current, goTo]);
+
+  const prev = useCallback(() => {
+    goTo((current - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+  }, [current, goTo]);
+
+  useEffect(() => {
+    const t = setInterval(next, INTERVAL);
+    return () => clearInterval(t);
+  }, [next]);
+
+  const slide = HERO_SLIDES[current];
+
   return (
     <Layout>
-      {/* Hero */}
-      <section className="relative bg-gray-50 flex flex-col items-center justify-center text-center px-4 py-24 md:py-36 overflow-hidden">
-        <div className="max-w-xl mx-auto relative z-10">
-          <p className="text-[11px] uppercase tracking-[0.4em] text-gray-400 font-medium mb-5">
-            Pakistani Thrift Fashion
-          </p>
-          <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-none tracking-tight mb-5">
-            Dressed<br />to Last.
+      {/* ── Hero Carousel ── */}
+      <section className="relative flex flex-col md:flex-row overflow-hidden" style={{ minHeight: "88vh" }}>
+
+        {/* Left: text panel */}
+        <div
+          className="flex flex-col justify-center px-8 md:px-16 lg:px-24 py-16 md:py-0 bg-white z-10 relative"
+          style={{ flex: "0 0 52%" }}
+        >
+          {/* Brand tag */}
+          <div
+            className="mb-5 transition-all duration-500"
+            style={{ opacity: fading ? 0 : 1, transform: fading ? "translateY(8px)" : "translateY(0)" }}
+          >
+            <span className="inline-block text-[10px] font-semibold uppercase tracking-[0.35em] text-gray-400 border border-gray-200 px-3 py-1">
+              {slide.tag}
+            </span>
+          </div>
+
+          {/* Headline */}
+          <h1
+            className="font-serif font-bold text-gray-900 leading-none tracking-tight mb-5 transition-all duration-500"
+            style={{
+              fontSize: "clamp(3rem, 7vw, 5.5rem)",
+              whiteSpace: "pre-line",
+              opacity: fading ? 0 : 1,
+              transform: fading ? "translateY(12px)" : "translateY(0)",
+            }}
+          >
+            {slide.headline}
           </h1>
-          <p className="text-[15px] text-gray-500 max-w-sm mx-auto leading-relaxed mb-8">
-            Designer ties, formal shirts — curated, authenticated, and priced for Pakistan.
+
+          {/* Subline */}
+          <p
+            className="text-[15px] text-gray-500 leading-relaxed max-w-xs mb-8 transition-all duration-500"
+            style={{ opacity: fading ? 0 : 1, transform: fading ? "translateY(8px)" : "translateY(0)" }}
+          >
+            {slide.sub}
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/products?category=ties">
-              <button className="h-11 px-8 bg-gray-900 text-white text-[12px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-800 transition-colors">
-                Shop Ties
+
+          {/* CTA buttons */}
+          <div className="flex items-center gap-3 mb-10">
+            <Link href={slide.cta.href}>
+              <button className="h-11 px-8 bg-gray-900 text-white text-[11px] uppercase tracking-[0.18em] font-semibold hover:bg-gray-700 transition-colors">
+                {slide.cta.label}
               </button>
             </Link>
             <Link href="/products">
-              <button className="h-11 px-8 bg-white text-gray-900 text-[12px] uppercase tracking-[0.15em] font-semibold border border-gray-200 hover:border-gray-900 transition-colors">
+              <button className="h-11 px-7 bg-white text-gray-900 text-[11px] uppercase tracking-[0.18em] font-semibold border border-gray-300 hover:border-gray-900 transition-colors">
                 All Products
               </button>
             </Link>
           </div>
+
+          {/* Dot indicators + arrows */}
+          <div className="flex items-center gap-4">
+            <button onClick={prev} className="w-8 h-8 border border-gray-200 flex items-center justify-center hover:border-gray-900 transition-colors" aria-label="Previous">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="flex gap-1.5">
+              {HERO_SLIDES.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goTo(i)}
+                  aria-label={`Slide ${i + 1}`}
+                  className={`transition-all duration-300 rounded-full ${i === current ? "w-6 h-1.5 bg-gray-900" : "w-1.5 h-1.5 bg-gray-300"}`}
+                />
+              ))}
+            </div>
+            <button onClick={next} className="w-8 h-8 border border-gray-200 flex items-center justify-center hover:border-gray-900 transition-colors" aria-label="Next">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Right: rotating image */}
+        <div className="relative flex-1 bg-gray-100 min-h-[50vw] md:min-h-0 overflow-hidden">
+          {HERO_SLIDES.map((s, i) => (
+            <div
+              key={i}
+              className="absolute inset-0 transition-opacity duration-700"
+              style={{ opacity: i === current ? 1 : 0 }}
+            >
+              <img
+                src={getImageUrl(s.image)}
+                alt={s.tag}
+                className="w-full h-full object-cover object-center"
+                loading={i === 0 ? "eager" : "lazy"}
+              />
+            </div>
+          ))}
+
+          {/* Subtle dark gradient at bottom */}
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+
+          {/* Slide counter */}
+          <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur-sm px-2.5 py-1 text-[11px] font-semibold text-gray-700 tracking-wide">
+            {String(current + 1).padStart(2, "0")} / {String(HERO_SLIDES.length).padStart(2, "0")}
+          </div>
         </div>
       </section>
 
-      {/* Featured Products */}
+      {/* ── Featured Products ── */}
       <section className="py-14 md:py-20 px-4 max-w-[1400px] mx-auto w-full">
         <div className="flex items-center justify-between mb-8">
           <h2 className="font-serif text-2xl font-bold text-gray-900 tracking-tight">Featured</h2>
@@ -98,7 +246,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Trust strip */}
+      {/* ── Trust strip ── */}
       <section className="border-t border-gray-100 py-10 px-4">
         <div className="max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
           <div>
