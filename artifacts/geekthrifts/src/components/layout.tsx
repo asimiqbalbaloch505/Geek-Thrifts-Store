@@ -329,40 +329,78 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="border-t border-gray-100 bg-white py-12">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="md:col-span-2">
+      <footer className="border-t border-gray-100 bg-white pt-12 pb-8">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8 mb-10">
+
+          {/* Brand */}
+          <div className="md:col-span-1">
             <h3 className="font-serif font-bold text-xl tracking-tight mb-3">GeekThrifts</h3>
-            <p className="text-[13px] text-gray-500 leading-relaxed max-w-xs">
-              Curated thrift fashion from the world's finest labels. Verified, priced fairly, and delivered across Pakistan.
+            <p className="text-[12px] text-gray-500 leading-relaxed">
+              Curated thrift fashion from the world's finest labels. Delivered across Pakistan.
             </p>
           </div>
+
+          {/* Ties */}
           <div>
-            <h4 className="font-semibold text-sm mb-4">Shop</h4>
-            <ul className="space-y-2.5">
-              <li><Link href="/products" className="text-[13px] text-gray-500 hover:text-black transition-colors">All Products</Link></li>
-              <li><Link href="/products?category=shirts" className="text-[13px] text-gray-500 hover:text-black transition-colors">Shirts</Link></li>
-              <li><Link href="/products?category=ties" className="text-[13px] text-gray-500 hover:text-black transition-colors">Ties</Link></li>
-              <li><Link href="/products?category=shoes" className="text-[13px] text-gray-500 hover:text-black transition-colors">Shoes</Link></li>
+            <Link href="/products?category=ties">
+              <h4 className="font-semibold text-sm mb-3 hover:text-gray-500 transition-colors cursor-pointer">Ties</h4>
+            </Link>
+            <ul className="space-y-2">
+              {["Italian", "French", "UK", "USA"].map(origin => (
+                <li key={origin}>
+                  <Link href="/products?category=ties">
+                    <span className="text-[12px] text-gray-500 hover:text-black transition-colors cursor-pointer">{origin}</span>
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
+
+          {/* Shirts */}
           <div>
-            <h4 className="font-semibold text-sm mb-4">Account</h4>
-            <ul className="space-y-2.5">
+            <Link href="/products?category=shirts">
+              <h4 className="font-semibold text-sm mb-3 hover:text-gray-500 transition-colors cursor-pointer">Shirts</h4>
+            </Link>
+            <ul className="space-y-2">
+              {["Italian", "French", "UK", "USA"].map(origin => (
+                <li key={origin}>
+                  <Link href="/products?category=shirts">
+                    <span className="text-[12px] text-gray-500 hover:text-black transition-colors cursor-pointer">{origin}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Shop */}
+          <div>
+            <h4 className="font-semibold text-sm mb-3">Shop</h4>
+            <ul className="space-y-2">
+              <li><Link href="/products" className="text-[12px] text-gray-500 hover:text-black transition-colors">All Products</Link></li>
+              <li><Link href="/products?category=shoes" className="text-[12px] text-gray-500 hover:text-black transition-colors">Shoes</Link></li>
+            </ul>
+          </div>
+
+          {/* Account */}
+          <div>
+            <h4 className="font-semibold text-sm mb-3">Account</h4>
+            <ul className="space-y-2">
               {isUserLoggedIn ? (
-                <li><button className="text-[13px] text-gray-500 hover:text-black transition-colors" onClick={userLogout}>Sign Out</button></li>
+                <li><button className="text-[12px] text-gray-500 hover:text-black transition-colors" onClick={userLogout}>Sign Out</button></li>
               ) : (
                 <>
-                  <li><Link href="/login" className="text-[13px] text-gray-500 hover:text-black transition-colors">Sign In</Link></li>
-                  <li><Link href="/signup" className="text-[13px] text-gray-500 hover:text-black transition-colors">Create Account</Link></li>
+                  <li><Link href="/login" className="text-[12px] text-gray-500 hover:text-black transition-colors">Sign In</Link></li>
+                  <li><Link href="/signup" className="text-[12px] text-gray-500 hover:text-black transition-colors">Create Account</Link></li>
                 </>
               )}
-              <li><span className="text-[13px] text-gray-400">Cash on Delivery</span></li>
+              <li><span className="text-[12px] text-gray-400">Cash on Delivery</span></li>
             </ul>
           </div>
+
         </div>
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 mt-10 pt-6 border-t border-gray-100">
-          <p className="text-[12px] text-gray-400">&copy; {new Date().getFullYear()} GeekThrifts. All rights reserved.</p>
+
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 pt-6 border-t border-gray-100">
+          <p className="text-[11px] text-gray-400">&copy; {new Date().getFullYear()} GeekThrifts. All rights reserved.</p>
         </div>
       </footer>
     </div>

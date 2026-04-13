@@ -3,7 +3,7 @@ import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-
 import { Link } from "wouter";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
 const HERO_SLIDES = [
@@ -51,20 +51,6 @@ const HERO_SLIDES = [
   },
 ];
 
-const TIE_BRANDS: Record<string, string[]> = {
-  "Italian": ["Armani", "Dolce & Gabbana", "Ermenegildo Zegna", "Etro", "Ferragamo", "Gucci", "Kiton", "Lardini", "Missoni", "Versace", "Tom Ford", "Marinella", "Sartorio Napoli"],
-  "French": ["Christian Dior", "Hermès", "Jean Paul Gaultier", "Lanvin", "Louis Vuitton", "Yves Saint Laurent"],
-  "UK": ["Burberry", "Drake's", "Paul Smith", "Reiss", "Charles Tyrwhitt", "Anderson & Sheppard"],
-  "USA": ["Brooks Brothers", "Ralph Lauren", "Tom Ford"],
-};
-
-const SHIRT_BRANDS: Record<string, string[]> = {
-  "Italian": ["Armani", "Brioni", "Canali", "Kiton", "Luigi Borrelli", "Ermenegildo Zegna"],
-  "French": ["Christian Dior", "Lanvin"],
-  "UK": ["Burberry", "Thomas Pink", "Turnbull & Asser", "Charles Tyrwhitt"],
-  "USA": ["Ralph Lauren", "Brooks Brothers"],
-};
-
 const INTERVAL = 4500;
 
 export default function Home() {
@@ -88,7 +74,6 @@ export default function Home() {
   }, [transitioning]);
 
   const next = useCallback(() => goTo((current + 1) % HERO_SLIDES.length), [current, goTo]);
-  const prev = useCallback(() => goTo((current - 1 + HERO_SLIDES.length) % HERO_SLIDES.length), [current, goTo]);
 
   useEffect(() => {
     const t = setInterval(next, INTERVAL);
@@ -176,24 +161,16 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Dots + arrows */}
-            <div className="flex items-center gap-4">
-              <button onClick={prev} className="w-8 h-8 border border-white/30 flex items-center justify-center hover:border-white transition-colors text-white" aria-label="Previous">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <div className="flex gap-1.5">
-                {HERO_SLIDES.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => goTo(i)}
-                    aria-label={`Slide ${i + 1}`}
-                    className={`transition-all duration-300 rounded-full ${i === current ? "w-6 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/40"}`}
-                  />
-                ))}
-              </div>
-              <button onClick={next} className="w-8 h-8 border border-white/30 flex items-center justify-center hover:border-white transition-colors text-white" aria-label="Next">
-                <ChevronRight className="w-4 h-4" />
-              </button>
+            {/* Dots only — no arrows */}
+            <div className="flex items-center gap-2">
+              {HERO_SLIDES.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goTo(i)}
+                  aria-label={`Slide ${i + 1}`}
+                  className={`transition-all duration-300 rounded-full ${i === current ? "w-6 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"}`}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -204,91 +181,39 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Shop by Category ── */}
-      <section className="py-16 px-4 max-w-[1400px] mx-auto w-full">
-        <h2 className="font-serif text-2xl font-bold text-gray-900 tracking-tight mb-8">Shop by Category</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          {/* Shirts */}
-          <div className="border border-gray-100 p-6 md:p-8 flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif text-xl font-bold text-gray-900">Shirts</h3>
-              <Link href="/products?category=shirts">
-                <button className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 hover:text-black transition-colors">
-                  Shop All <ArrowRight className="w-3 h-3" />
-                </button>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-              {Object.entries(SHIRT_BRANDS).map(([region, brands]) => (
-                <div key={region}>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-2 pb-1 border-b border-gray-100">
-                    {region}
-                  </p>
-                  <ul className="space-y-1">
-                    {brands.map(brand => (
-                      <li key={brand}>
-                        <Link href="/products?category=shirts">
-                          <span className="text-[12px] text-gray-600 hover:text-black transition-colors cursor-pointer">{brand}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            <Link href="/products?category=shirts">
-              <button className="mt-auto h-10 w-full border border-gray-900 text-gray-900 text-[11px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-900 hover:text-white transition-colors">
-                Browse Shirts
-              </button>
-            </Link>
-          </div>
-
-          {/* Ties */}
-          <div className="border border-gray-100 p-6 md:p-8 flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-              <h3 className="font-serif text-xl font-bold text-gray-900">Ties</h3>
+      {/* ── Thin brand-origin strip ── */}
+      <div className="border-b border-gray-100 bg-white">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <Link href="/products?category=ties">
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 hover:text-gray-500 transition-colors cursor-pointer">Ties</span>
+          </Link>
+          {["Italian", "French", "UK", "USA"].map((origin, i, arr) => (
+            <span key={origin} className="flex items-center gap-6">
               <Link href="/products?category=ties">
-                <button className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500 hover:text-black transition-colors">
-                  Shop All <ArrowRight className="w-3 h-3" />
-                </button>
+                <span className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors cursor-pointer">{origin}</span>
               </Link>
-            </div>
+              {i < arr.length - 1 && <span className="text-gray-200 text-[10px]">·</span>}
+            </span>
+          ))}
 
-            <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-              {Object.entries(TIE_BRANDS).map(([region, brands]) => (
-                <div key={region}>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-2 pb-1 border-b border-gray-100">
-                    {region}
-                  </p>
-                  <ul className="space-y-1">
-                    {brands.map(brand => (
-                      <li key={brand}>
-                        <Link href="/products?category=ties">
-                          <span className="text-[12px] text-gray-600 hover:text-black transition-colors cursor-pointer">{brand}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+          <span className="hidden md:block w-px h-4 bg-gray-200 mx-2" />
 
-            <Link href="/products?category=ties">
-              <button className="mt-auto h-10 w-full border border-gray-900 text-gray-900 text-[11px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-900 hover:text-white transition-colors">
-                Browse Ties
-              </button>
-            </Link>
-          </div>
-
+          <Link href="/products?category=shirts">
+            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 hover:text-gray-500 transition-colors cursor-pointer">Shirts</span>
+          </Link>
+          {["Italian", "French", "UK", "USA"].map((origin, i, arr) => (
+            <span key={origin} className="flex items-center gap-6">
+              <Link href="/products?category=shirts">
+                <span className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors cursor-pointer">{origin}</span>
+              </Link>
+              {i < arr.length - 1 && <span className="text-gray-200 text-[10px]">·</span>}
+            </span>
+          ))}
         </div>
-      </section>
+      </div>
 
       {/* ── Featured Products ── */}
-      <section className="py-6 pb-16 px-4 max-w-[1400px] mx-auto w-full">
+      <section className="py-14 md:py-20 px-4 max-w-[1400px] mx-auto w-full">
         <div className="flex items-center justify-between mb-8">
           <h2 className="font-serif text-2xl font-bold text-gray-900 tracking-tight">Featured</h2>
           <Link href="/products" className="flex items-center gap-1 text-[12px] font-semibold uppercase tracking-[0.1em] text-gray-500 hover:text-black transition-colors">
