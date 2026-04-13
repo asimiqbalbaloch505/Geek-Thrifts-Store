@@ -18,6 +18,7 @@ function mapProduct(product: typeof productsTable.$inferSelect, categoryName: st
     ...product,
     price: Number(product.price),
     categoryName,
+    subcategory: product.subcategory ?? null,
     sizes: product.sizes ?? [],
     createdAt: product.createdAt.toISOString(),
   };

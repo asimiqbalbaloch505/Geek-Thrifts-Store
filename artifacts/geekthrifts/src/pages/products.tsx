@@ -4,10 +4,17 @@ import { Link, useSearch } from "wouter";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const SUBCATEGORY_MAP: Record<string, string[]> = {
+  shirts: ["Italian", "French", "UK", "USA"],
+  ties: ["Italian", "French", "UK", "USA"],
+  shoes: ["Formals", "Sneakers", "Joggers"],
+};
+
 export default function Products() {
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const categoryParam = searchParams.get("category");
+  const subcategoryParam = searchParams.get("subcategory");
 
   const { data: categories } = useListCategories({
     query: { queryKey: getListCategoriesQueryKey() }
@@ -26,23 +33,38 @@ export default function Products() {
     }
   }
 
-  const { data: products, isLoading } = useListProducts(
+  const { data: allProducts, isLoading } = useListProducts(
     categoryId ? { categoryId } : undefined,
     { query: { queryKey: getListProductsQueryKey(categoryId ? { categoryId } : undefined) } }
   );
 
+  const products = subcategoryParam && allProducts
+    ? allProducts.filter(p => p.subcategory?.toLowerCase() === subcategoryParam.toLowerCase())
+    : allProducts;
+
   const activeCategory = categoryId ? categories?.find(c => c.id === categoryId) : null;
-  const pageTitle = activeCategory?.name ?? (categoryParam ? categoryParam : "All Products");
+  const slug = categoryParam?.toLowerCase() ?? "";
+  const subcategoryOptions = SUBCATEGORY_MAP[slug] ?? [];
+
+  const pageTitle = subcategoryParam
+    ? `${subcategoryParam} ${activeCategory?.name ?? categoryParam ?? "Products"}`
+    : activeCategory?.name ?? (categoryParam ? categoryParam : "All Products");
 
   return (
     <Layout>
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 md:py-12">
 
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-6">
+        <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-6 flex-wrap">
           <Link href="/" className="hover:text-gray-700 transition-colors">Home</Link>
           <span>/</span>
-          <span className="text-gray-700 capitalize">{pageTitle}</span>
+          {categoryParam && (
+            <>
+              <Link href={`/products?category=${categoryParam}`} className="hover:text-gray-700 transition-colors capitalize">{activeCategory?.name ?? categoryParam}</Link>
+              {subcategoryParam && <><span>/</span><span className="text-gray-700">{subcategoryParam}</span></>}
+            </>
+          )}
+          {!categoryParam && <span className="text-gray-700">All Products</span>}
         </div>
 
         {/* Page header */}
@@ -53,10 +75,10 @@ export default function Products() {
           <span className="text-[13px] text-gray-400">{products?.length ?? 0} Items</span>
         </div>
 
-        {/* Filter pills */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        {/* Category filter pills */}
+        <div className="flex flex-wrap gap-2 mb-4">
           <Link href="/products">
-            <button className={`h-8 px-4 text-[12px] font-semibold uppercase tracking-[0.1em] transition-colors border ${!categoryParam ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-700 hover:text-gray-900"}`}>
+            <button className={`h-8 px-4 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors border ${!categoryParam ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-700 hover:text-gray-900"}`}>
               All
             </button>
           </Link>
@@ -64,13 +86,33 @@ export default function Products() {
             const isActive = categoryParam === cat.slug || categoryId === cat.id;
             return (
               <Link key={cat.id} href={`/products?category=${cat.slug}`}>
-                <button className={`h-8 px-4 text-[12px] font-semibold uppercase tracking-[0.1em] transition-colors border ${isActive ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-700 hover:text-gray-900"}`}>
+                <button className={`h-8 px-4 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors border ${isActive && !subcategoryParam ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-700 hover:text-gray-900"}`}>
                   {cat.name}
                 </button>
               </Link>
             );
           })}
         </div>
+
+        {/* Subcategory pills (shown when a category is selected) */}
+        {categoryParam && subcategoryOptions.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-8">
+            <Link href={`/products?category=${categoryParam}`}>
+              <button className={`h-7 px-3 text-[10px] font-medium uppercase tracking-[0.1em] transition-colors ${!subcategoryParam ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-400 hover:text-gray-700"}`}>
+                All
+              </button>
+            </Link>
+            {subcategoryOptions.map(sub => (
+              <Link key={sub} href={`/products?category=${categoryParam}&subcategory=${encodeURIComponent(sub)}`}>
+                <button className={`h-7 px-3 text-[10px] font-medium uppercase tracking-[0.1em] transition-colors ${subcategoryParam === sub ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-400 hover:text-gray-700"}`}>
+                  {sub}
+                </button>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {!categoryParam && <div className="mb-8" />}
 
         {/* Content */}
         {isLoading ? (
@@ -110,6 +152,11 @@ export default function Products() {
                   {product.stock > 0 && product.stock <= 2 && (
                     <span className="absolute top-2 left-2 bg-gray-900 text-white text-[10px] px-2 py-0.5 uppercase tracking-wider font-semibold">
                       Last {product.stock}
+                    </span>
+                  )}
+                  {product.subcategory && (
+                    <span className="absolute top-2 right-2 bg-white/90 text-gray-600 text-[9px] px-1.5 py-0.5 uppercase tracking-wider font-medium">
+                      {product.subcategory}
                     </span>
                   )}
                 </div>

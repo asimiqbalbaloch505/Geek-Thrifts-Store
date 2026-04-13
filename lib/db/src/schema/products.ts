@@ -13,6 +13,7 @@ export const productsTable = pgTable("products", {
   stock: integer("stock").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
   isFeatured: boolean("is_featured").notNull().default(false),
+  subcategory: text("subcategory"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

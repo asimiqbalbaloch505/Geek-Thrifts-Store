@@ -135,6 +135,7 @@ export const ListProductsResponseItem = zod.object({
   stock: zod.number(),
   isActive: zod.boolean(),
   isFeatured: zod.boolean(),
+  subcategory: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListProductsResponse = zod.array(ListProductsResponseItem);
