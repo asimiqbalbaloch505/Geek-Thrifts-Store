@@ -75,94 +75,41 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 /* ─────────────────────────────────────────────────────────
-   Mega-menu panel
+   Simple dropdown panel
 ───────────────────────────────────────────────────────── */
-function MegaMenu({ item }: { item: NavItem }) {
-  const isShoes = item.slug === "shoes";
-
+function SimpleDropdown({ item }: { item: NavItem }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: -8 }}
+      initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.16, ease: "easeOut" }}
-      className="absolute top-full left-1/2 -translate-x-1/2 w-[720px] max-w-[96vw] bg-white shadow-[0_12px_48px_rgba(0,0,0,0.12)] border border-gray-100 z-50"
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.14, ease: "easeOut" }}
+      className="absolute top-full left-0 z-50 min-w-[140px] bg-white border border-gray-100 shadow-[0_8px_24px_rgba(0,0,0,0.09)]"
     >
-      <div className="grid grid-cols-[1fr_220px]">
-        {/* Left — subcategories */}
-        <div className="py-7 px-8">
-          <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-gray-400 mb-5">
-            Shop by Origin
-          </p>
-
-          <div className="flex flex-col gap-0">
-            {item.subs.map((sub) => (
-              <Link
-                key={sub.label}
-                href={
-                  sub.comingSoon
-                    ? `/products?category=${item.slug}`
-                    : `/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.label)}`
-                }
-              >
-                <div
-                  className={`group flex items-center justify-between py-3 border-b border-gray-80 last:border-b-0 transition-colors ${
-                    sub.comingSoon ? "cursor-default opacity-50" : "hover:pl-1"
-                  }`}
-                  style={{ transition: "padding 0.15s ease" }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-0.5 h-4 rounded-full transition-colors ${sub.comingSoon ? "bg-gray-200" : "bg-gray-200 group-hover:bg-gray-900"}`} />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[15px] font-semibold tracking-tight transition-colors ${sub.comingSoon ? "text-gray-400" : "text-gray-800 group-hover:text-black"}`}>
-                          {sub.label}
-                        </span>
-                        {sub.comingSoon && (
-                          <span className="text-[8px] uppercase tracking-[0.2em] font-bold bg-gray-100 text-gray-400 px-1.5 py-0.5">
-                            Soon
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{sub.description}</p>
-                    </div>
-                  </div>
-                  {!sub.comingSoon && (
-                    <ArrowRight className="w-3.5 h-3.5 text-gray-200 group-hover:text-gray-700 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          <div className="mt-5 pt-4 border-t border-gray-100">
-            <Link href={`/products?category=${item.slug}`}>
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 hover:text-gray-900 transition-colors">
-                View All {item.label}
-                <ArrowRight className="w-3 h-3" />
-              </span>
-            </Link>
-          </div>
+      <Link href={`/products?category=${item.slug}`}>
+        <div className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500 hover:text-black hover:bg-gray-50 transition-colors border-b border-gray-100">
+          All {item.label}
         </div>
-
-        {/* Right — featured image */}
-        <div className="relative overflow-hidden bg-gray-100">
-          <img
-            src={item.featured.img}
-            alt={item.label}
-            className="w-full h-full object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <p className="text-white text-[13px] font-bold leading-tight mb-1">
-              {item.featured.headline}
-            </p>
-            <p className="text-white/65 text-[10px] leading-relaxed">
-              {item.featured.sub}
-            </p>
+      </Link>
+      {item.subs.map((sub) => (
+        <Link
+          key={sub.label}
+          href={
+            sub.comingSoon
+              ? `/products?category=${item.slug}`
+              : `/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.label)}`
+          }
+        >
+          <div className="group flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors">
+            <span className={`text-[13px] font-medium transition-colors ${sub.comingSoon ? "text-gray-300" : "text-gray-800 group-hover:text-black"}`}>
+              {sub.label}
+            </span>
+            {sub.comingSoon && (
+              <span className="text-[8px] uppercase tracking-wide font-bold text-gray-300 ml-2">Soon</span>
+            )}
           </div>
-        </div>
-      </div>
+        </Link>
+      ))}
     </motion.div>
   );
 }
@@ -207,7 +154,7 @@ function NavItemWithMenu({ item }: { item: NavItem }) {
       </Link>
 
       <AnimatePresence>
-        {open && <MegaMenu item={item} />}
+        {open && <SimpleDropdown item={item} />}
       </AnimatePresence>
     </div>
   );
