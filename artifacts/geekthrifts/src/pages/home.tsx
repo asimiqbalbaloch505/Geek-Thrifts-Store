@@ -226,7 +226,6 @@ export default function Home() {
                     )}
                   </div>
                   <div className="mt-2.5 space-y-0.5">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-medium">{product.categoryName}</p>
                     <h3 className="text-[13px] font-semibold text-gray-900 leading-snug group-hover:text-gray-600 transition-colors">{product.name}</h3>
                     <p className="text-[13px] font-bold text-gray-900">{formatPKR(product.price)}</p>
                   </div>

@@ -31,11 +31,11 @@ export default function AdminLogin() {
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "asimiqbalbaloch505@gmail.com", password: "Asim@39794" },
   });
 
   useEffect(() => {
-    if (isAuthenticated) setLocation("/admin");
+    if (isAuthenticated) setLocation("/admin/dashboard");
   }, [isAuthenticated, setLocation]);
 
   const onSubmit = (values: LoginValues) => {
@@ -43,7 +43,7 @@ export default function AdminLogin() {
       onSuccess: (data) => {
         if (data.success && data.token) {
           login(data.token);
-          setLocation("/admin");
+          setLocation("/admin/dashboard");
         }
       },
       onError: () => {
