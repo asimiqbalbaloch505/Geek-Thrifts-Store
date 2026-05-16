@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useCart } from "@/hooks/use-cart";
 import { useUserAuth } from "@/hooks/use-user-auth";
-import { Menu, X, ShoppingBag, User, LogOut, ArrowRight } from "lucide-react";
+import { Menu, X, ShoppingBag, User, LogOut, ChevronDown, ArrowRight } from "lucide-react";
 import { useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -82,62 +82,62 @@ function MegaMenu({ item }: { item: NavItem }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -6 }}
+      initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
-      className="absolute top-full left-1/2 -translate-x-1/2 w-[820px] max-w-[96vw] bg-white shadow-[0_8px_40px_rgba(0,0,0,0.10)] border border-gray-100 z-50"
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.16, ease: "easeOut" }}
+      className="absolute top-full left-1/2 -translate-x-1/2 w-[720px] max-w-[96vw] bg-white shadow-[0_12px_48px_rgba(0,0,0,0.12)] border border-gray-100 z-50"
     >
-      <div className="grid grid-cols-[1fr_280px]">
+      <div className="grid grid-cols-[1fr_220px]">
         {/* Left — subcategories */}
-        <div className="py-8 px-10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 mb-6">
+        <div className="py-7 px-8">
+          <p className="text-[9px] font-bold uppercase tracking-[0.35em] text-gray-400 mb-5">
             Shop by Origin
           </p>
 
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+          <div className="flex flex-col gap-0">
             {item.subs.map((sub) => (
               <Link
                 key={sub.label}
                 href={
-                  isShoes
-                    ? "/products?category=shoes"
+                  sub.comingSoon
+                    ? `/products?category=${item.slug}`
                     : `/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.label)}`
                 }
               >
                 <div
-                  className={`group flex items-start justify-between py-3.5 border-b border-gray-80 transition-colors ${
-                    sub.comingSoon ? "cursor-default opacity-60" : "hover:border-gray-300"
+                  className={`group flex items-center justify-between py-3 border-b border-gray-80 last:border-b-0 transition-colors ${
+                    sub.comingSoon ? "cursor-default opacity-50" : "hover:pl-1"
                   }`}
+                  style={{ transition: "padding 0.15s ease" }}
                 >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`text-[14px] font-semibold tracking-tight transition-colors ${
-                          sub.comingSoon ? "text-gray-500" : "text-gray-900 group-hover:text-black"
-                        }`}
-                      >
-                        {sub.label}
-                      </span>
-                      {sub.comingSoon && (
-                        <span className="text-[9px] uppercase tracking-[0.15em] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5">
-                          Soon
+                  <div className="flex items-center gap-3">
+                    <div className={`w-0.5 h-4 rounded-full transition-colors ${sub.comingSoon ? "bg-gray-200" : "bg-gray-200 group-hover:bg-gray-900"}`} />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[15px] font-semibold tracking-tight transition-colors ${sub.comingSoon ? "text-gray-400" : "text-gray-800 group-hover:text-black"}`}>
+                          {sub.label}
                         </span>
-                      )}
+                        {sub.comingSoon && (
+                          <span className="text-[8px] uppercase tracking-[0.2em] font-bold bg-gray-100 text-gray-400 px-1.5 py-0.5">
+                            Soon
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-0.5">{sub.description}</p>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{sub.description}</p>
                   </div>
                   {!sub.comingSoon && (
-                    <ArrowRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-700 group-hover:translate-x-0.5 transition-all mt-1 flex-shrink-0" />
+                    <ArrowRight className="w-3.5 h-3.5 text-gray-200 group-hover:text-gray-700 group-hover:translate-x-1 transition-all flex-shrink-0" />
                   )}
                 </div>
               </Link>
             ))}
           </div>
 
-          <div className="mt-6">
+          <div className="mt-5 pt-4 border-t border-gray-100">
             <Link href={`/products?category=${item.slug}`}>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] text-gray-500 hover:text-gray-900 transition-colors border-b border-transparent hover:border-gray-400 pb-0.5">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 hover:text-gray-900 transition-colors">
                 View All {item.label}
                 <ArrowRight className="w-3 h-3" />
               </span>
@@ -146,18 +146,18 @@ function MegaMenu({ item }: { item: NavItem }) {
         </div>
 
         {/* Right — featured image */}
-        <div className="relative overflow-hidden bg-gray-50">
+        <div className="relative overflow-hidden bg-gray-100">
           <img
             src={item.featured.img}
             alt={item.label}
             className="w-full h-full object-cover object-center"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-5">
-            <p className="text-white text-[14px] font-bold leading-tight mb-1">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <p className="text-white text-[13px] font-bold leading-tight mb-1">
               {item.featured.headline}
             </p>
-            <p className="text-white/70 text-[11px] leading-relaxed">
+            <p className="text-white/65 text-[10px] leading-relaxed">
               {item.featured.sub}
             </p>
           </div>
@@ -168,7 +168,7 @@ function MegaMenu({ item }: { item: NavItem }) {
 }
 
 /* ─────────────────────────────────────────────────────────
-   Nav item with mega-menu trigger
+   Nav item trigger
 ───────────────────────────────────────────────────────── */
 function NavItemWithMenu({ item }: { item: NavItem }) {
   const [open, setOpen] = useState(false);
@@ -184,22 +184,23 @@ function NavItemWithMenu({ item }: { item: NavItem }) {
     setOpen(true);
   };
   const hide = () => {
-    timeoutRef.current = setTimeout(() => setOpen(false), 120);
+    timeoutRef.current = setTimeout(() => setOpen(false), 150);
   };
 
   return (
-    <div className="relative" onMouseEnter={show} onMouseLeave={hide}>
+    <div className="relative h-full flex items-center" onMouseEnter={show} onMouseLeave={hide}>
       <Link href={`/products?category=${item.slug}`}>
         <button
-          className={`relative h-14 flex items-center gap-0 text-[12px] font-semibold uppercase tracking-[0.12em] transition-colors px-1 ${
+          className={`relative h-14 flex items-center gap-1 text-[12px] font-semibold uppercase tracking-[0.12em] transition-colors px-1 group ${
             isActive ? "text-black" : "text-gray-500 hover:text-black"
           }`}
         >
           {item.label}
-          {/* animated underline */}
+          <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${open ? "rotate-180 text-black" : "text-gray-400"}`} />
+          {/* Active underline */}
           <span
-            className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 transition-transform duration-200 origin-left ${
-              open || isActive ? "scale-x-100" : "scale-x-0"
+            className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 transition-all duration-200 origin-left ${
+              isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
             }`}
           />
         </button>
@@ -232,23 +233,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Header */}
       <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-10 h-14 flex items-center gap-10">
+        <div className="max-w-[1400px] mx-auto px-4 lg:px-10 h-14 flex items-center gap-8">
 
           {/* Logo */}
-          <Link href="/" className="flex-shrink-0 text-[22px] font-bold tracking-tight text-gray-900 font-serif mr-2">
+          <Link href="/" className="flex-shrink-0 text-[22px] font-bold tracking-tight text-gray-900 font-serif">
             GeekThrifts
           </Link>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8 flex-1 h-14">
+          {/* Desktop Nav — visible at 900px+ */}
+          <nav className="hidden sm:flex items-center gap-6 flex-1 h-14">
             <Link href="/">
               <button
-                className={`relative h-14 flex items-center text-[12px] font-semibold uppercase tracking-[0.12em] transition-colors px-1 ${
+                className={`relative h-14 flex items-center text-[12px] font-semibold uppercase tracking-[0.12em] transition-colors px-1 group ${
                   location === "/" ? "text-black" : "text-gray-500 hover:text-black"
                 }`}
               >
                 Home
-                <span className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 transition-transform duration-200 origin-left ${location === "/" ? "scale-x-100" : "scale-x-0"}`} />
+                <span className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 transition-all duration-200 origin-left ${location === "/" ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
               </button>
             </Link>
             {NAV_ITEMS.map((item) => (
@@ -263,7 +264,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-1.5 px-3 py-2 text-gray-600 hover:text-black transition-colors" aria-label="Account">
                     <User className="w-4 h-4" />
-                    <span className="hidden md:inline text-[12px] font-medium uppercase tracking-[0.06em]">{user.name.split(" ")[0]}</span>
+                    <span className="hidden sm:inline text-[12px] font-medium uppercase tracking-[0.06em]">{user.name.split(" ")[0]}</span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="rounded-none border-gray-100 font-sans text-sm w-48 shadow-sm">
@@ -279,7 +280,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <div className="hidden md:flex items-center gap-0 text-sm">
+              <div className="hidden sm:flex items-center gap-0 text-sm">
                 <Link href="/login" className="px-3 py-2 text-[12px] font-medium uppercase tracking-[0.06em] text-gray-500 hover:text-black transition-colors">Sign In</Link>
                 <span className="text-gray-200">/</span>
                 <Link href="/signup" className="px-3 py-2 text-[12px] font-medium uppercase tracking-[0.06em] text-gray-500 hover:text-black transition-colors">Join</Link>
@@ -295,8 +296,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
               )}
             </Link>
 
+            {/* Mobile hamburger — hidden at 900px+ */}
             <button
-              className="md:hidden px-2 py-2 text-gray-700 ml-1"
+              className="sm:hidden px-2 py-2 text-gray-700 ml-1"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Menu"
             >
@@ -305,7 +307,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile accordion menu */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
@@ -313,10 +315,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="md:hidden border-t border-gray-100 bg-white overflow-hidden absolute left-0 w-full z-50 shadow-lg"
+              className="sm:hidden border-t border-gray-100 bg-white overflow-hidden absolute left-0 w-full z-50 shadow-lg"
             >
               <div className="px-5 pt-3 pb-5 flex flex-col">
-                <Link href="/" onClick={() => setMobileOpen(false)} className="py-3 text-[13px] font-semibold uppercase tracking-[0.1em] text-gray-900 border-b border-gray-100">Home</Link>
+                <Link href="/" onClick={() => setMobileOpen(false)} className="py-3 text-[13px] font-semibold uppercase tracking-[0.1em] text-gray-900 border-b border-gray-100">
+                  Home
+                </Link>
+
                 {NAV_ITEMS.map((item) => (
                   <div key={item.slug}>
                     <button
@@ -324,13 +329,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       className="w-full flex items-center justify-between py-3 text-[13px] font-semibold uppercase tracking-[0.1em] text-gray-900 border-b border-gray-100"
                     >
                       {item.label}
-                      <motion.span
-                        animate={{ rotate: expandedMobile === item.slug ? 180 : 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="text-gray-400"
-                      >
-                        ▾
-                      </motion.span>
+                      <ChevronDown
+                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedMobile === item.slug ? "rotate-180" : ""}`}
+                      />
                     </button>
 
                     <AnimatePresence>
@@ -340,27 +341,35 @@ export function Layout({ children }: { children: React.ReactNode }) {
                           animate={{ opacity: 1, height: "auto" }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.18 }}
-                          className="overflow-hidden"
+                          className="overflow-hidden bg-gray-50"
                         >
-                          <div className="py-2 pl-3 pr-1 border-b border-gray-100 flex flex-col gap-0.5">
+                          <div className="py-2 px-4 flex flex-col">
                             <Link
                               href={`/products?category=${item.slug}`}
                               onClick={() => setMobileOpen(false)}
-                              className="py-2 text-[12px] font-semibold text-gray-700 hover:text-black transition-colors"
+                              className="py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] text-gray-600 hover:text-black border-b border-gray-100 transition-colors"
                             >
                               All {item.label}
                             </Link>
                             {item.subs.map((sub) => (
                               <Link
                                 key={sub.label}
-                                href={sub.comingSoon ? "/products?category=shoes" : `/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.label)}`}
+                                href={sub.comingSoon ? `/products?category=${item.slug}` : `/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.label)}`}
                                 onClick={() => setMobileOpen(false)}
-                                className="flex items-center justify-between py-2 text-[12px] text-gray-500 hover:text-black transition-colors"
                               >
-                                <span>{sub.label}</span>
-                                {sub.comingSoon && (
-                                  <span className="text-[9px] uppercase tracking-wide font-bold bg-gray-100 text-gray-400 px-1.5 py-0.5">Soon</span>
-                                )}
+                                <div className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-b-0">
+                                  <div>
+                                    <span className={`text-[13px] font-semibold ${sub.comingSoon ? "text-gray-400" : "text-gray-800"}`}>
+                                      {sub.label}
+                                    </span>
+                                    <span className="ml-2 text-[11px] text-gray-400">{sub.description}</span>
+                                  </div>
+                                  {sub.comingSoon ? (
+                                    <span className="text-[8px] uppercase tracking-[0.15em] font-bold bg-gray-200 text-gray-400 px-1.5 py-0.5">Soon</span>
+                                  ) : (
+                                    <ArrowRight className="w-3.5 h-3.5 text-gray-300" />
+                                  )}
+                                </div>
                               </Link>
                             ))}
                           </div>
@@ -370,7 +379,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </div>
                 ))}
 
-                <div className="pt-4 pb-1 flex flex-col gap-3">
+                <div className="pt-4 pb-1 flex flex-col gap-3 border-t border-gray-100 mt-2">
                   {isUserLoggedIn && user ? (
                     <button className="text-left text-[13px] font-semibold uppercase tracking-[0.1em] text-gray-700" onClick={() => { userLogout(); setMobileOpen(false); }}>
                       Sign Out
@@ -446,7 +455,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <ul className="space-y-2">
               {["Formals", "Sneakers", "Joggers"].map(sub => (
                 <li key={sub}>
-                  <Link href={`/products?category=shoes&subcategory=${encodeURIComponent(sub)}`}>
+                  <Link href={`/products?category=shoes`}>
                     <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
                   </Link>
                 </li>

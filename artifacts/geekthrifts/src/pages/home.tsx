@@ -181,36 +181,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Thin brand-origin strip ── */}
-      <div className="border-b border-gray-100 bg-white">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
-          <Link href="/products?category=ties">
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 hover:text-gray-500 transition-colors cursor-pointer">Ties</span>
-          </Link>
-          {["Italian", "French", "UK", "USA"].map((origin, i, arr) => (
-            <span key={origin} className="flex items-center gap-6">
-              <Link href="/products?category=ties">
-                <span className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors cursor-pointer">{origin}</span>
-              </Link>
-              {i < arr.length - 1 && <span className="text-gray-200 text-[10px]">·</span>}
-            </span>
-          ))}
-
-          <span className="hidden md:block w-px h-4 bg-gray-200 mx-2" />
-
-          <Link href="/products?category=shirts">
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 hover:text-gray-500 transition-colors cursor-pointer">Shirts</span>
-          </Link>
-          {["Italian", "French", "UK", "USA"].map((origin, i, arr) => (
-            <span key={origin} className="flex items-center gap-6">
-              <Link href="/products?category=shirts">
-                <span className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors cursor-pointer">{origin}</span>
-              </Link>
-              {i < arr.length - 1 && <span className="text-gray-200 text-[10px]">·</span>}
-            </span>
-          ))}
-        </div>
-      </div>
 
       {/* ── Featured Products ── */}
       <section className="py-14 md:py-20 px-4 max-w-[1400px] mx-auto w-full">
