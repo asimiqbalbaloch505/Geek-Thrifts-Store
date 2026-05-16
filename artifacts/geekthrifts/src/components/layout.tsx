@@ -305,16 +305,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                                 onClick={() => setMobileOpen(false)}
                               >
                                 <div className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-b-0">
-                                  <div>
-                                    <span className={`text-[13px] font-semibold ${sub.comingSoon ? "text-gray-400" : "text-gray-800"}`}>
-                                      {sub.label}
-                                    </span>
-                                    <span className="ml-2 text-[11px] text-gray-400">{sub.description}</span>
-                                  </div>
-                                  {sub.comingSoon ? (
-                                    <span className="text-[8px] uppercase tracking-[0.15em] font-bold bg-gray-200 text-gray-400 px-1.5 py-0.5">Soon</span>
-                                  ) : (
-                                    <ArrowRight className="w-3.5 h-3.5 text-gray-300" />
+                                  <span className={`text-[13px] font-medium ${sub.comingSoon ? "text-gray-300" : "text-gray-800"}`}>
+                                    {sub.label}
+                                  </span>
+                                  {sub.comingSoon && (
+                                    <span className="text-[8px] uppercase tracking-wide font-bold text-gray-300">Soon</span>
                                   )}
                                 </div>
                               </Link>
