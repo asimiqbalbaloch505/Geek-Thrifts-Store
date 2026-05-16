@@ -10,6 +10,7 @@ export const productsTable = pgTable("products", {
   imageUrl: text("image_url"),
   categoryId: integer("category_id").notNull(),
   sizes: text("sizes").array().notNull().default([]),
+  widths: text("widths").array().notNull().default([]),
   stock: integer("stock").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
   isFeatured: boolean("is_featured").notNull().default(false),

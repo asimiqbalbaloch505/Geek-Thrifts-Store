@@ -9,39 +9,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
 
 /* ── Tie size guide data ── */
-const TIE_SIZE_GUIDE = [
-  {
-    size: 'Regular (57–58")',
-    label: "Regular",
-    inches: '57–58"',
-    cm: "145–147 cm",
-    for: 'Most guys 5\'8"–6\'0" (173–183 cm)',
-    tip: "Tip lands at belt buckle",
-  },
-  {
-    size: 'Short (55–56")',
-    label: "Short",
-    inches: '55–56"',
-    cm: "140–142 cm",
-    for: 'Under 5\'7" (170 cm) or longer torso',
-    tip: "Prevents tip from drooping",
-  },
-  {
-    size: 'Long / XL (59–63")',
-    label: "Long / XL",
-    inches: '59–63"',
-    cm: "150–160 cm",
-    for: '6\'1"+ (185+ cm) or larger builds',
-    tip: "Keeps the tie at the right length",
-  },
-  {
-    size: 'Extra Long / XXL (64–67")',
-    label: "Extra Long",
-    inches: '64–67"',
-    cm: "162–170 cm",
-    for: '6\'4"+ (193+ cm) or low knot style',
-    tip: "For very tall or big-knot preference",
-  },
+const TIE_LENGTH_GUIDE = [
+  { label: "Regular", inches: '57–58"', cm: "145–147 cm", for: '5\'8"–6\'0" (173–183 cm)' },
+  { label: "Short", inches: '55–56"', cm: "140–142 cm", for: 'Under 5\'7" (170 cm)' },
+  { label: "Long / XL", inches: '59–63"', cm: "150–160 cm", for: '6\'1"+ (185+ cm)' },
+  { label: "Extra Long", inches: '64–67"', cm: "162–170 cm", for: '6\'4"+ (193+ cm)' },
+];
+
+const TIE_WIDTH_GUIDE = [
+  { label: "Classic", inches: '3.25–3.5"', cm: "8.3–8.9 cm", for: "Traditional, full-spread collar suits" },
+  { label: "Slim", inches: '2–2.5"', cm: "5–6.3 cm", for: "Modern slim-fit suits, smaller builds" },
+  { label: "Skinny", inches: 'Under 2"', cm: "Under 5 cm", for: "Fashion-forward, very slim lapels" },
 ];
 
 function TieSizeGuide() {
@@ -57,22 +35,37 @@ function TieSizeGuide() {
       </button>
 
       {open && (
-        <div className="border border-gray-100 divide-y divide-gray-100 text-[11px]">
-          {/* Header */}
-          <div className="grid grid-cols-4 px-3 py-2 bg-gray-50 font-semibold uppercase tracking-[0.08em] text-gray-500">
-            <span>Length</span>
-            <span>Size</span>
-            <span className="col-span-2">Best For</span>
+        <div className="border border-gray-100 text-[11px] mb-4">
+          {/* Length */}
+          <div className="px-3 py-2 bg-gray-50 text-[10px] uppercase tracking-[0.12em] font-bold text-gray-500">Length</div>
+          <div className="grid grid-cols-4 px-3 py-1.5 bg-gray-50/60 font-semibold uppercase tracking-[0.06em] text-gray-400 border-b border-gray-100 text-[10px]">
+            <span>Name</span><span>Inches</span><span>cm</span><span>Best For</span>
           </div>
-          {TIE_SIZE_GUIDE.map(row => (
-            <div key={row.size} className="grid grid-cols-4 px-3 py-2.5 text-gray-600">
-              <span className="font-medium text-gray-900">{row.label}</span>
-              <span>{row.inches}<br /><span className="text-gray-400">{row.cm}</span></span>
-              <span className="col-span-2 leading-relaxed">{row.for}</span>
+          {TIE_LENGTH_GUIDE.map(row => (
+            <div key={row.label} className="grid grid-cols-4 px-3 py-2 border-b border-gray-50 text-gray-600">
+              <span className="font-semibold text-gray-900">{row.label}</span>
+              <span>{row.inches}</span>
+              <span className="text-gray-400">{row.cm}</span>
+              <span>{row.for}</span>
             </div>
           ))}
-          <div className="px-3 py-2 bg-gray-50 text-gray-500 text-[10px] tracking-wide">
-            When tied, the tip should land at the middle of your belt buckle.
+
+          {/* Width */}
+          <div className="px-3 py-2 bg-gray-50 text-[10px] uppercase tracking-[0.12em] font-bold text-gray-500 border-t border-gray-100">Width</div>
+          <div className="grid grid-cols-4 px-3 py-1.5 bg-gray-50/60 font-semibold uppercase tracking-[0.06em] text-gray-400 border-b border-gray-100 text-[10px]">
+            <span>Name</span><span>Inches</span><span>cm</span><span>Best For</span>
+          </div>
+          {TIE_WIDTH_GUIDE.map(row => (
+            <div key={row.label} className="grid grid-cols-4 px-3 py-2 border-b border-gray-50 text-gray-600 last:border-b-0">
+              <span className="font-semibold text-gray-900">{row.label}</span>
+              <span>{row.inches}</span>
+              <span className="text-gray-400">{row.cm}</span>
+              <span>{row.for}</span>
+            </div>
+          ))}
+
+          <div className="px-3 py-2 bg-gray-50 text-gray-400 text-[10px] tracking-wide border-t border-gray-100">
+            Tip: The tie tip should land at the middle of your belt buckle when tied.
           </div>
         </div>
       )}
@@ -91,19 +84,34 @@ export default function ProductDetail() {
   });
 
   const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedWidth, setSelectedWidth] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
 
   const isTie = product?.categoryName?.toLowerCase() === "ties";
   const hasSizeChoice = product?.sizes && product.sizes.length > 0 && !(product.sizes.length === 1 && product.sizes[0] === "One Size");
+  const hasWidthChoice = isTie && product?.widths && product.widths.length > 0;
 
   const handleAddToCart = () => {
     if (!product) return;
     if (hasSizeChoice && !selectedSize) {
-      toast({ title: "Select a size", description: "Please choose a size before adding to cart.", variant: "destructive" });
+      toast({ title: "Select a length", description: "Please choose a tie length before adding to cart.", variant: "destructive" });
       return;
     }
-    const sizeToUse = selectedSize || "One Size";
-    addToCart(product, sizeToUse, quantity);
+    if (hasWidthChoice && !selectedWidth) {
+      toast({ title: "Select a width", description: "Please choose a tie width before adding to cart.", variant: "destructive" });
+      return;
+    }
+
+    let sizeLabel: string;
+    if (isTie && selectedSize && selectedWidth) {
+      const shortLen = selectedSize.replace(/\s*\(.*?\)/, "").trim();
+      const shortWid = selectedWidth.replace(/\s*\(.*?\)/, "").trim();
+      sizeLabel = `${shortLen} / ${shortWid}`;
+    } else {
+      sizeLabel = selectedSize || "One Size";
+    }
+
+    addToCart(product, sizeLabel, quantity);
     toast({ title: "Added to cart", description: `${quantity}x ${product.name} added to your cart.` });
   };
 
@@ -195,20 +203,20 @@ export default function ProductDetail() {
               {product.description ?? "A carefully selected piece from GeekThrifts. Authenticated, cleaned, and pressed for the modern Pakistani professional."}
             </p>
 
-            {/* Sizes */}
+            {/* Length (ties) / Size (shirts & shoes) */}
             {hasSizeChoice && (
-              <div className="mb-2">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700">
-                    {isTie ? "Tie Length" : "Size"}
-                    {selectedSize && <span className="ml-2 text-gray-400 normal-case tracking-normal font-normal">— {selectedSize}</span>}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2 mb-4">
+              <div className="mb-5">
+                <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">
+                  {isTie ? "Tie Length" : "Size"}
+                  {selectedSize && (
+                    <span className="ml-2 text-gray-400 normal-case tracking-normal font-normal">
+                      — {selectedSize.replace(/\s*\(.*?\)/, "").trim()}
+                    </span>
+                  )}
+                </p>
+                <div className="flex flex-wrap gap-2">
                   {product.sizes.map((size) => {
-                    const shortLabel = isTie
-                      ? size.replace(/\s*\(.*?\)/, "").trim()
-                      : size;
+                    const shortLabel = isTie ? size.replace(/\s*\(.*?\)/, "").trim() : size;
                     return (
                       <button
                         key={size}
@@ -228,7 +236,40 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* Tie size guide (expandable) */}
+            {/* Width — ties only */}
+            {hasWidthChoice && (
+              <div className="mb-5">
+                <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">
+                  Tie Width
+                  {selectedWidth && (
+                    <span className="ml-2 text-gray-400 normal-case tracking-normal font-normal">
+                      — {selectedWidth.replace(/\s*\(.*?\)/, "").trim()}
+                    </span>
+                  )}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {product.widths.map((width) => {
+                    const shortLabel = width.replace(/\s*\(.*?\)/, "").trim();
+                    return (
+                      <button
+                        key={width}
+                        onClick={() => setSelectedWidth(width)}
+                        title={width}
+                        className={`h-10 px-3 border text-[11px] font-semibold uppercase tracking-wide transition-colors whitespace-nowrap ${
+                          selectedWidth === width
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white text-gray-700 border-gray-200 hover:border-gray-900"
+                        }`}
+                      >
+                        {shortLabel}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Size guide (ties only) */}
             {isTie && <TieSizeGuide />}
 
             {/* Quantity */}

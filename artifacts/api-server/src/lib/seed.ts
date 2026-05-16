@@ -46,6 +46,7 @@ export async function seedIfEmpty() {
 
     await migrateSubcategories();
     await migrateTieSizes();
+    await migrateTieWidths();
   } catch (err) {
     logger.error({ err }, "Failed to seed database");
   }
@@ -94,6 +95,7 @@ async function migrateSubcategories() {
 }
 
 const TIE_SIZES = ["Regular (57–58\")", "Short (55–56\")", "Long / XL (59–63\")", "Extra Long / XXL (64–67\")"];
+const TIE_WIDTHS = ["Classic (3.25–3.5\")", "Slim (2–2.5\")", "Skinny (Under 2\")"];
 
 async function migrateTieSizes() {
   try {
@@ -110,5 +112,23 @@ async function migrateTieSizes() {
     logger.info("Migrated tie sizes.");
   } catch (err) {
     logger.error({ err }, "Failed to migrate tie sizes");
+  }
+}
+
+async function migrateTieWidths() {
+  try {
+    const [tiesCategory] = await db.select().from(categoriesTable).where(eq(categoriesTable.slug, "ties")).limit(1);
+    if (!tiesCategory) return;
+
+    const ties = await db.select().from(productsTable).where(eq(productsTable.categoryId, tiesCategory.id));
+
+    for (const tie of ties) {
+      if (tie.widths.length === 0) {
+        await db.update(productsTable).set({ widths: TIE_WIDTHS }).where(eq(productsTable.id, tie.id));
+      }
+    }
+    logger.info("Migrated tie widths.");
+  } catch (err) {
+    logger.error({ err }, "Failed to migrate tie widths");
   }
 }
