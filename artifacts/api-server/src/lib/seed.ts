@@ -1,6 +1,6 @@
 import { db, categoriesTable, productsTable } from "@workspace/db";
 import { logger } from "./logger";
-import { eq, isNull } from "drizzle-orm";
+import { eq, isNull, and } from "drizzle-orm";
 
 export async function seedIfEmpty() {
   try {
@@ -45,6 +45,7 @@ export async function seedIfEmpty() {
     }
 
     await migrateSubcategories();
+    await migrateTieSizes();
   } catch (err) {
     logger.error({ err }, "Failed to seed database");
   }
@@ -89,5 +90,25 @@ async function migrateSubcategories() {
     logger.info(`Migrated subcategories for ${untagged.length} products.`);
   } catch (err) {
     logger.error({ err }, "Failed to migrate subcategories");
+  }
+}
+
+const TIE_SIZES = ["Regular (57–58\")", "Short (55–56\")", "Long / XL (59–63\")", "Extra Long / XXL (64–67\")"];
+
+async function migrateTieSizes() {
+  try {
+    const [tiesCategory] = await db.select().from(categoriesTable).where(eq(categoriesTable.slug, "ties")).limit(1);
+    if (!tiesCategory) return;
+
+    const ties = await db.select().from(productsTable).where(eq(productsTable.categoryId, tiesCategory.id));
+
+    for (const tie of ties) {
+      if (tie.sizes.length === 1 && tie.sizes[0] === "One Size") {
+        await db.update(productsTable).set({ sizes: TIE_SIZES }).where(eq(productsTable.id, tie.id));
+      }
+    }
+    logger.info("Migrated tie sizes.");
+  } catch (err) {
+    logger.error({ err }, "Failed to migrate tie sizes");
   }
 }

@@ -6,7 +6,79 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
+
+/* ── Tie size guide data ── */
+const TIE_SIZE_GUIDE = [
+  {
+    size: 'Regular (57–58")',
+    label: "Regular",
+    inches: '57–58"',
+    cm: "145–147 cm",
+    for: 'Most guys 5\'8"–6\'0" (173–183 cm)',
+    tip: "Tip lands at belt buckle",
+  },
+  {
+    size: 'Short (55–56")',
+    label: "Short",
+    inches: '55–56"',
+    cm: "140–142 cm",
+    for: 'Under 5\'7" (170 cm) or longer torso',
+    tip: "Prevents tip from drooping",
+  },
+  {
+    size: 'Long / XL (59–63")',
+    label: "Long / XL",
+    inches: '59–63"',
+    cm: "150–160 cm",
+    for: '6\'1"+ (185+ cm) or larger builds',
+    tip: "Keeps the tie at the right length",
+  },
+  {
+    size: 'Extra Long / XXL (64–67")',
+    label: "Extra Long",
+    inches: '64–67"',
+    cm: "162–170 cm",
+    for: '6\'4"+ (193+ cm) or low knot style',
+    tip: "For very tall or big-knot preference",
+  },
+];
+
+function TieSizeGuide() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mb-6">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-500 hover:text-black transition-colors mb-3"
+      >
+        Tie Size Guide
+        {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+      </button>
+
+      {open && (
+        <div className="border border-gray-100 divide-y divide-gray-100 text-[11px]">
+          {/* Header */}
+          <div className="grid grid-cols-4 px-3 py-2 bg-gray-50 font-semibold uppercase tracking-[0.08em] text-gray-500">
+            <span>Length</span>
+            <span>Size</span>
+            <span className="col-span-2">Best For</span>
+          </div>
+          {TIE_SIZE_GUIDE.map(row => (
+            <div key={row.size} className="grid grid-cols-4 px-3 py-2.5 text-gray-600">
+              <span className="font-medium text-gray-900">{row.label}</span>
+              <span>{row.inches}<br /><span className="text-gray-400">{row.cm}</span></span>
+              <span className="col-span-2 leading-relaxed">{row.for}</span>
+            </div>
+          ))}
+          <div className="px-3 py-2 bg-gray-50 text-gray-500 text-[10px] tracking-wide">
+            When tied, the tip should land at the middle of your belt buckle.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ProductDetail() {
   const params = useParams();
@@ -21,9 +93,12 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
 
+  const isTie = product?.categoryName?.toLowerCase() === "ties";
+  const hasSizeChoice = product?.sizes && product.sizes.length > 0 && !(product.sizes.length === 1 && product.sizes[0] === "One Size");
+
   const handleAddToCart = () => {
     if (!product) return;
-    if (product.sizes?.length > 0 && !selectedSize) {
+    if (hasSizeChoice && !selectedSize) {
       toast({ title: "Select a size", description: "Please choose a size before adding to cart.", variant: "destructive" });
       return;
     }
@@ -121,26 +196,40 @@ export default function ProductDetail() {
             </p>
 
             {/* Sizes */}
-            {product.sizes && product.sizes.length > 0 && product.sizes[0] !== "One Size" && (
-              <div className="mb-6">
-                <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">Size</p>
-                <div className="flex flex-wrap gap-2">
-                  {product.sizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`h-10 min-w-[44px] px-3 border text-[12px] font-semibold uppercase transition-colors ${
-                        selectedSize === size
-                          ? "bg-gray-900 text-white border-gray-900"
-                          : "bg-white text-gray-700 border-gray-200 hover:border-gray-900"
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+            {hasSizeChoice && (
+              <div className="mb-2">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700">
+                    {isTie ? "Tie Length" : "Size"}
+                    {selectedSize && <span className="ml-2 text-gray-400 normal-case tracking-normal font-normal">— {selectedSize}</span>}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {product.sizes.map((size) => {
+                    const shortLabel = isTie
+                      ? size.replace(/\s*\(.*?\)/, "").trim()
+                      : size;
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        title={size}
+                        className={`h-10 px-3 border text-[11px] font-semibold uppercase tracking-wide transition-colors whitespace-nowrap ${
+                          selectedSize === size
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white text-gray-700 border-gray-200 hover:border-gray-900"
+                        }`}
+                      >
+                        {shortLabel}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
+
+            {/* Tie size guide (expandable) */}
+            {isTie && <TieSizeGuide />}
 
             {/* Quantity */}
             <div className="mb-6">
