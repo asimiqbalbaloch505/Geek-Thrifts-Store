@@ -114,14 +114,8 @@ export default function Products() {
 
         {!categoryParam && <div className="mb-8" />}
 
-        {/* Shoes — Coming Soon */}
-        {slug === "shoes" ? (
-          <div className="py-32 flex flex-col items-center justify-center border border-gray-100 bg-gray-50">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-4">Shoes</p>
-            <h2 className="font-serif text-3xl md:text-4xl font-bold text-gray-900 tracking-tight mb-4">Coming Soon</h2>
-            <p className="text-[14px] text-gray-500 max-w-sm text-center">We are curating the finest footwear for Pakistan. Check back soon.</p>
-          </div>
-        ) : isLoading ? (
+        {/* Content */}
+        {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
             {Array(8).fill(0).map((_, i) => (
               <div key={i}>
@@ -174,13 +168,12 @@ export default function Products() {
             ))}
           </div>
         ) : (
-          <div className="py-24 text-center bg-gray-50 border border-gray-100">
-            <p className="text-[14px] text-gray-500 mb-4">No products found in this category.</p>
-            <Link href="/products">
-              <button className="h-10 px-6 bg-gray-900 text-white text-[12px] uppercase tracking-[0.12em] font-semibold hover:bg-gray-800 transition-colors">
-                Clear Filter
-              </button>
-            </Link>
+          <div className="py-32 flex flex-col items-center justify-center border border-gray-100 bg-gray-50">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-4">
+              {subcategoryParam ?? activeCategory?.name ?? "Collection"}
+            </p>
+            <h2 className="font-serif text-3xl md:text-4xl font-bold text-gray-900 tracking-tight mb-4">Coming Soon</h2>
+            <p className="text-[14px] text-gray-500 max-w-sm text-center">We are curating new arrivals for this collection. Check back soon.</p>
           </div>
         )}
       </div>
