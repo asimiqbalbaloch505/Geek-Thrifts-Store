@@ -114,8 +114,14 @@ export default function Products() {
 
         {!categoryParam && <div className="mb-8" />}
 
-        {/* Content */}
-        {isLoading ? (
+        {/* Shoes — Coming Soon */}
+        {slug === "shoes" ? (
+          <div className="py-32 flex flex-col items-center justify-center border border-gray-100 bg-gray-50">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-4">Shoes</p>
+            <h2 className="font-serif text-3xl md:text-4xl font-bold text-gray-900 tracking-tight mb-4">Coming Soon</h2>
+            <p className="text-[14px] text-gray-500 max-w-sm text-center">We are curating the finest footwear for Pakistan. Check back soon.</p>
+          </div>
+        ) : isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
             {Array(8).fill(0).map((_, i) => (
               <div key={i}>
