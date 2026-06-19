@@ -9,7 +9,7 @@ import {
   getListCategoriesQueryKey,
   Product
 } from "@workspace/api-client-react";
-import { formatPKR } from "@/lib/utils";
+import { formatPKR, getImageUrl } from "@/lib/utils";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -177,7 +177,7 @@ export default function AdminProducts() {
             <div key={product.id} className="border border-border bg-card flex flex-col group">
               <div className="aspect-[4/3] bg-muted border-b border-border relative">
                 {product.imageUrl ? (
-                  <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+                  <img src={getImageUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-[10px] uppercase text-muted-foreground font-bold tracking-widest">No Image</div>
                 )}

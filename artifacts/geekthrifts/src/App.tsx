@@ -19,6 +19,11 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import AdminOrders from "@/pages/admin/orders";
 import AdminProducts from "@/pages/admin/products";
 import AdminCategories from "@/pages/admin/categories";
+import OrderStatus from "@/pages/order-status";
+import Shipping from "@/pages/shipping";
+import ReturnPolicy from "@/pages/return-policy";
+import FAQs from "@/pages/faqs";
+import PrivacyPolicy from "@/pages/privacy-policy";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +38,13 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/signup" component={SignupPage} />
       
+      {/* Info Pages */}
+      <Route path="/order-status" component={OrderStatus} />
+      <Route path="/shipping" component={Shipping} />
+      <Route path="/return-policy" component={ReturnPolicy} />
+      <Route path="/faqs" component={FAQs} />
+      <Route path="/privacy-policy" component={PrivacyPolicy} />
+
       {/* Admin Routes */}
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin" component={AdminLogin} />

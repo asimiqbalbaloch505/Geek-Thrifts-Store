@@ -397,7 +397,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <ul className="space-y-2">
               {["Formals", "Sneakers", "Joggers"].map(sub => (
                 <li key={sub}>
-                  <Link href={`/products?category=shoes`}>
+                  <Link href={`/products?category=shoes&subcategory=${encodeURIComponent(sub)}`}>
                     <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
                   </Link>
                 </li>
@@ -408,11 +408,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3">Help</p>
             <ul className="space-y-2">
-              {["Order Status", "Shipping & Delivery", "Return Policy", "FAQs", "Privacy Policy"].map(item => (
-                <li key={item}>
-                  <span className="text-[12px] text-gray-500 uppercase tracking-[0.06em] cursor-default">{item}</span>
-                </li>
-              ))}
+              <li><Link href="/order-status" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Order Status</Link></li>
+              <li><Link href="/shipping" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Shipping &amp; Delivery</Link></li>
+              <li><Link href="/return-policy" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Return Policy</Link></li>
+              <li><Link href="/faqs" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">FAQs</Link></li>
+              <li><Link href="/privacy-policy" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Privacy Policy</Link></li>
             </ul>
           </div>
 
