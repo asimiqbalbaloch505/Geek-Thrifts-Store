@@ -420,7 +420,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3">Customer Care</p>
             <ul className="space-y-2.5">
               <li><span className="text-[12px] text-gray-500">COD Only — No Online Payment</span></li>
-              <li><a href="https://instagram.com" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Instagram</a></li>
+              <li><a href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==" target="_blank" rel="noopener noreferrer" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Instagram</a></li>
               <li><a href="https://facebook.com" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Facebook</a></li>
               {!isUserLoggedIn && (
                 <li><Link href="/signup" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Create Account</Link></li>
