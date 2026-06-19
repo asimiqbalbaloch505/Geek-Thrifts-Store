@@ -67,9 +67,9 @@ const NAV_ITEMS: NavItem[] = [
       sub: "Curated footwear from premium international brands — launching shortly",
     },
     subs: [
-      { label: "Formals", description: "Oxford, Derby & Loafer", comingSoon: true },
-      { label: "Sneakers", description: "Nike, Adidas & New Balance", comingSoon: true },
-      { label: "Joggers", description: "Puma & New Balance", comingSoon: true },
+      { label: "Formals", description: "Oxford, Derby & Loafer" },
+      { label: "Sneakers", description: "Nike, Adidas & New Balance" },
+      { label: "Joggers", description: "Puma & New Balance" },
     ],
   },
 ];
