@@ -87,7 +87,7 @@ export default function AdminOrders() {
                 <TableHead className="h-12 px-4 text-left align-middle font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Date</TableHead>
                 <TableHead className="h-12 px-4 text-left align-middle font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Customer</TableHead>
                 <TableHead className="h-12 px-4 text-left align-middle font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Total</TableHead>
-                <TableHead className="h-12 px-4 text-left align-middle font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Items</TableHead>
+                <TableHead className="h-12 px-4 text-left align-middle font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Items Ordered</TableHead>
                 <TableHead className="h-12 px-4 text-right align-middle font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -108,8 +108,21 @@ export default function AdminOrders() {
                   <TableCell className="p-4 align-middle font-bold text-sm">
                     {formatPKR(order.totalAmount)}
                   </TableCell>
-                  <TableCell className="p-4 align-middle text-sm text-muted-foreground">
-                    {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                  <TableCell className="p-4 align-top">
+                    <div className="flex flex-col gap-2">
+                      {order.items.map((item, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-bold leading-tight">{item.productName}</div>
+                            <div className="flex gap-3 mt-0.5">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground border border-border px-1.5 py-0.5">Size: {item.size}</span>
+                              <span className="text-[10px] uppercase tracking-widest text-muted-foreground pt-0.5">Qty: {item.quantity}</span>
+                            </div>
+                          </div>
+                          <div className="text-xs font-bold text-right whitespace-nowrap pt-0.5">{formatPKR(item.price)}</div>
+                        </div>
+                      ))}
+                    </div>
                   </TableCell>
                   <TableCell className="p-4 align-middle text-right">
                     <Select
