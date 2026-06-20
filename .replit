@@ -73,3 +73,6 @@ packages = ["zip"]
 ADMIN_EMAIL = "asimiqbalbaloch505@gmail.com"
 ADMIN_PASSWORD = "Asim@39794"
 JWT_SECRET = "geekthrifts-jwt-secret-key-2024-xK9mP2nQ"
+GMAIL_USER = "geekthriftsstore@gmail.com"
+GMAIL_APP_PASSWORD = "vwgeizkenmbuymt"
+ADMIN_NOTIFY_EMAIL = "kashifishangi123@gmail.com"

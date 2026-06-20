@@ -9,6 +9,7 @@ import type { CreateOrderBodyItemsItem } from "./createOrderBodyItemsItem";
 
 export interface CreateOrderBody {
   customerName: string;
+  customerEmail?: string | null;
   customerPhone: string;
   customerAddress: string;
   customerCity: string;

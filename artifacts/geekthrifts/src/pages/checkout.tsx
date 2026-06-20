@@ -21,6 +21,7 @@ import { useState } from "react";
 
 const checkoutSchema = z.object({
   customerName: z.string().min(2, "Name must be at least 2 characters"),
+  customerEmail: z.string().email("Valid email required").optional().or(z.literal("")),
   customerPhone: z.string().min(10, "Valid phone number required"),
   customerAddress: z.string().min(10, "Full address required"),
   customerCity: z.string().min(2, "City is required"),
@@ -40,6 +41,7 @@ export default function Checkout() {
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       customerName: "",
+      customerEmail: "",
       customerPhone: "",
       customerAddress: "",
       customerCity: "",
@@ -52,7 +54,12 @@ export default function Checkout() {
     
     createOrder.mutate({
       data: {
-        ...values,
+        customerName: values.customerName,
+        customerEmail: values.customerEmail || null,
+        customerPhone: values.customerPhone,
+        customerAddress: values.customerAddress,
+        customerCity: values.customerCity,
+        notes: values.notes,
         items: items.map(item => ({
           productId: item.product.id,
           quantity: item.quantity,
@@ -146,6 +153,22 @@ export default function Checkout() {
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="customerEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs uppercase tracking-widest font-bold">
+                        Email Address <span className="text-muted-foreground font-normal normal-case tracking-normal">(optional — for order updates)</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input className="h-12 rounded-none border-border focus-visible:ring-foreground" type="email" placeholder="you@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
                 
                 <FormField
                   control={form.control}

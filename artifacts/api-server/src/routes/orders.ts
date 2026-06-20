@@ -9,6 +9,7 @@ import {
   GetOrderParams,
   UpdateOrderStatusParams,
 } from "@workspace/api-zod";
+import { sendOrderConfirmationEmails, sendStatusUpdateEmails } from "../lib/email.js";
 
 const router = Router();
 
@@ -67,6 +68,7 @@ router.post("/", async (req, res): Promise<void> => {
       .insert(ordersTable)
       .values({
         customerName: parsed.data.customerName,
+        customerEmail: parsed.data.customerEmail ?? null,
         customerPhone: parsed.data.customerPhone,
         customerAddress: parsed.data.customerAddress,
         customerCity: parsed.data.customerCity,
@@ -78,6 +80,18 @@ router.post("/", async (req, res): Promise<void> => {
       .returning();
 
     res.status(201).json(mapOrder(order));
+
+    sendOrderConfirmationEmails({
+      id: order.id,
+      customerName: order.customerName,
+      customerEmail: order.customerEmail,
+      customerPhone: order.customerPhone,
+      customerAddress: order.customerAddress,
+      customerCity: order.customerCity,
+      totalAmount: Number(order.totalAmount),
+      status: order.status,
+      items: itemsWithDetails,
+    }).catch((err) => req.log.error({ err }, "Failed to send order confirmation emails"));
   } catch (err) {
     req.log.error({ err }, "Failed to create order");
     res.status(500).json({ error: "Internal server error" });
@@ -125,6 +139,18 @@ router.put("/:id", async (req, res): Promise<void> => {
       return;
     }
     res.json(mapOrder(updated));
+
+    sendStatusUpdateEmails({
+      id: updated.id,
+      customerName: updated.customerName,
+      customerEmail: updated.customerEmail,
+      customerPhone: updated.customerPhone,
+      customerAddress: updated.customerAddress,
+      customerCity: updated.customerCity,
+      totalAmount: Number(updated.totalAmount),
+      status: updated.status,
+      items: updated.items as Array<{ productName: string; quantity: number; size: string; price: number }>,
+    }).catch((err) => req.log.error({ err }, "Failed to send status update emails"));
   } catch (err) {
     req.log.error({ err }, "Failed to update order status");
     res.status(500).json({ error: "Internal server error" });

@@ -107,6 +107,7 @@ export const OrderStatus = {
 export interface Order {
   id: number;
   customerName: string;
+  customerEmail?: string | null;
   customerPhone: string;
   customerAddress: string;
   customerCity: string;
@@ -125,6 +126,7 @@ export type CreateOrderBodyItemsItem = {
 
 export interface CreateOrderBody {
   customerName: string;
+  customerEmail?: string | null;
   customerPhone: string;
   customerAddress: string;
   customerCity: string;

@@ -132,11 +132,9 @@ export const ListProductsResponseItem = zod.object({
   categoryId: zod.number(),
   categoryName: zod.string(),
   sizes: zod.array(zod.string()),
-  widths: zod.array(zod.string()),
   stock: zod.number(),
   isActive: zod.boolean(),
   isFeatured: zod.boolean(),
-  subcategory: zod.string().nullish(),
   createdAt: zod.string(),
 });
 export const ListProductsResponse = zod.array(ListProductsResponseItem);
@@ -172,7 +170,6 @@ export const GetProductResponse = zod.object({
   categoryId: zod.number(),
   categoryName: zod.string(),
   sizes: zod.array(zod.string()),
-  widths: zod.array(zod.string()),
   stock: zod.number(),
   isActive: zod.boolean(),
   isFeatured: zod.boolean(),
@@ -207,7 +204,6 @@ export const UpdateProductResponse = zod.object({
   categoryId: zod.number(),
   categoryName: zod.string(),
   sizes: zod.array(zod.string()),
-  widths: zod.array(zod.string()),
   stock: zod.number(),
   isActive: zod.boolean(),
   isFeatured: zod.boolean(),
@@ -238,6 +234,7 @@ export const ListOrdersQueryParams = zod.object({
 export const ListOrdersResponseItem = zod.object({
   id: zod.number(),
   customerName: zod.string(),
+  customerEmail: zod.string().nullish(),
   customerPhone: zod.string(),
   customerAddress: zod.string(),
   customerCity: zod.string(),
@@ -262,6 +259,7 @@ export const ListOrdersResponse = zod.array(ListOrdersResponseItem);
  */
 export const CreateOrderBody = zod.object({
   customerName: zod.string(),
+  customerEmail: zod.string().nullish(),
   customerPhone: zod.string(),
   customerAddress: zod.string(),
   customerCity: zod.string(),
@@ -285,6 +283,7 @@ export const GetOrderParams = zod.object({
 export const GetOrderResponse = zod.object({
   id: zod.number(),
   customerName: zod.string(),
+  customerEmail: zod.string().nullish(),
   customerPhone: zod.string(),
   customerAddress: zod.string(),
   customerCity: zod.string(),
@@ -317,6 +316,7 @@ export const UpdateOrderStatusBody = zod.object({
 export const UpdateOrderStatusResponse = zod.object({
   id: zod.number(),
   customerName: zod.string(),
+  customerEmail: zod.string().nullish(),
   customerPhone: zod.string(),
   customerAddress: zod.string(),
   customerCity: zod.string(),
