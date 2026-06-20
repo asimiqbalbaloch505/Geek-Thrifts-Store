@@ -8,6 +8,9 @@ const SUBCATEGORY_MAP: Record<string, string[]> = {
   shirts: ["Italian", "French", "UK", "USA"],
   ties: ["Italian", "French", "UK", "USA"],
   shoes: ["Formals", "Sneakers", "Joggers"],
+  watches: ["Wrist Watches", "Pocket Watches", "Smart Watches", "Men's", "Women's", "Casual", "Formal", "Sports"],
+  belts: ["Leather Belts", "Formal Belts", "Casual Belts", "Reversible", "Black", "Brown", "Tan"],
+  trousers: ["Formal Trousers", "Chinos", "Dress Pants", "Slim Fit", "Straight Fit", "Tapered Fit"],
 };
 
 export default function Products() {

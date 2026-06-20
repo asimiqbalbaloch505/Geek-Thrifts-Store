@@ -73,6 +73,60 @@ const NAV_ITEMS: NavItem[] = [
       { label: "Joggers", description: "Puma & New Balance" },
     ],
   },
+  {
+    label: "Watches",
+    slug: "watches",
+    featured: {
+      img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&fit=crop&auto=format",
+      headline: "Coming Soon",
+      sub: "Curated vintage and modern timepieces — launching shortly",
+    },
+    subs: [
+      { label: "Wrist Watches", description: "Dress & casual timepieces" },
+      { label: "Pocket Watches", description: "Vintage & antique styles" },
+      { label: "Smart Watches", description: "Connected & fitness" },
+      { label: "Men's", description: "Heritage men's pieces" },
+      { label: "Women's", description: "Elegant women's styles" },
+      { label: "Casual", description: "Everyday wear" },
+      { label: "Formal", description: "Dress & luxury" },
+      { label: "Sports", description: "Diver & chronograph" },
+    ],
+  },
+  {
+    label: "Belts",
+    slug: "belts",
+    featured: {
+      img: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&fit=crop&auto=format",
+      headline: "Coming Soon",
+      sub: "Premium leather belts from world-class brands — launching shortly",
+    },
+    subs: [
+      { label: "Leather Belts", description: "Full-grain & genuine leather" },
+      { label: "Formal Belts", description: "Pin & plate buckle styles" },
+      { label: "Casual Belts", description: "Everyday casual wear" },
+      { label: "Reversible", description: "Two-tone versatile belts" },
+      { label: "Black", description: "Classic black leather" },
+      { label: "Brown", description: "Rich brown tones" },
+      { label: "Tan", description: "Light tan & cognac" },
+    ],
+  },
+  {
+    label: "Trousers",
+    slug: "trousers",
+    featured: {
+      img: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600&fit=crop&auto=format",
+      headline: "Coming Soon",
+      sub: "Premium formal and smart-casual trousers — launching shortly",
+    },
+    subs: [
+      { label: "Formal Trousers", description: "Office & dress trousers" },
+      { label: "Chinos", description: "Smart-casual cotton chinos" },
+      { label: "Dress Pants", description: "Premium dress trousers" },
+      { label: "Slim Fit", description: "Modern slim silhouette" },
+      { label: "Straight Fit", description: "Classic straight cut" },
+      { label: "Tapered Fit", description: "Tapered & fitted style" },
+    ],
+  },
 ];
 
 /* ─────────────────────────────────────────────────────────
@@ -360,7 +414,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Columns */}
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-8">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-6">
           <div>
             <Link href="/products?category=ties">
               <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">Ties</p>
@@ -399,6 +453,51 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {["Formals", "Sneakers", "Joggers"].map(sub => (
                 <li key={sub}>
                   <Link href={`/products?category=shoes&subcategory=${encodeURIComponent(sub)}`}>
+                    <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <Link href="/products?category=watches">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">Watches</p>
+            </Link>
+            <ul className="space-y-2">
+              {["Wrist Watches", "Pocket Watches", "Smart Watches", "Men's", "Women's"].map(sub => (
+                <li key={sub}>
+                  <Link href={`/products?category=watches&subcategory=${encodeURIComponent(sub)}`}>
+                    <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <Link href="/products?category=belts">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">Belts</p>
+            </Link>
+            <ul className="space-y-2">
+              {["Leather Belts", "Formal Belts", "Casual Belts", "Black", "Brown", "Tan"].map(sub => (
+                <li key={sub}>
+                  <Link href={`/products?category=belts&subcategory=${encodeURIComponent(sub)}`}>
+                    <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <Link href="/products?category=trousers">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">Trousers</p>
+            </Link>
+            <ul className="space-y-2">
+              {["Formal Trousers", "Chinos", "Dress Pants", "Slim Fit", "Straight Fit"].map(sub => (
+                <li key={sub}>
+                  <Link href={`/products?category=trousers&subcategory=${encodeURIComponent(sub)}`}>
                     <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
                   </Link>
                 </li>

@@ -1,0 +1,57 @@
+1. Main Category: Watches ⌚
+Subcategories:
+1. By Type: Wrist Watches | Pocket Watches | Smart Watches
+2. By Gender: Men's Watches | Women's Watches | Unisex
+3. By Style: Casual | Formal/Dress | Sports/Diver | Chronograph | Luxury
+4. By Brand: [Add your brands here - Casio, Fossil, Seiko, etc]
+
+Filter options: Price, Brand, Strap Material - Leather, Metal, Rubber, Dial Color, Movement - Quartz, Automatic
+
+2. Main Category: Suits 👔
+Subcategories:
+1. By Fit: Slim Fit Suits | Regular Fit Suits | Tailored Fit
+2. By Piece: 2-Piece Suits | 3-Piece Suits | Blazers Only | Suit Pants Only
+3. By Occasion: Wedding Suits | Office/Formal Suits | Party Wear
+4. By Fabric: Wool | Linen | Polyester Blend | Velvet/Tuxedo
+
+Filter options: Size, Color, Fabric, Fit, Price
+
+3. Main Category: Formal Shirts 👔
+Subcategories:
+1. By Fit: Slim Fit | Regular Fit | Tailored Fit
+2. By Collar: Spread Collar | Button Down | Cutaway | Mandarin
+3. By Sleeve: Full Sleeve | Half Sleeve
+4. By Pattern: Solid | Stripes | Checks | Printed
+5. By Color: White | Blue | Black | Other Colors
+
+Filter options: Size - S to 3XL, Cuff Type, Fabric - Cotton, Linen, Blend
+
+4. Main Category: Trousers/Pants 👖
+Subcategories:
+1. By Type: Formal Trousers | Chinos | Dress Pants
+2. By Fit: Slim Fit | Straight Fit | Tapered Fit
+3. By Color: Black | Navy | Grey | Khaki/Beige | Other
+4. By Fabric: Cotton | Wool Blend | Linen
+
+Filter options: Waist Size, Inseam/Length, Fit, Color
+
+5. Main Category: Belts 🔗
+Subcategories:
+1. By Type: Leather Belts | Formal/Dress Belts | Casual Belts | Reversible Belts
+2. By Buckle: Pin Buckle | Auto Lock | Plate Buckle
+3. By Width: 3.5cm Formal | 4cm Casual
+4. By Color: Black | Brown | Tan | Other
+
+Filter options: Size/Length, Material, Color, Buckle Type
+
+Website Structure Tips so it “suits” well:
+
+1. URL structure for SEO: 
+   /suits/slim-fit/ not /category123/product456
+   Google + users both prefer this
+
+2. Menu: Keep main categories in top menu. Subcategories in dropdown/hover menu
+
+3. Filters are key: For fashion, filters = sales. Add size, color, price, brand filters on each category page
+
+4. Naming: Use “Formal Shirts” not just “Shirts” since you’re focusing on suits/trousers niche. Keeps site premium
