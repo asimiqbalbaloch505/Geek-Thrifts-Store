@@ -61,7 +61,7 @@ export default function AdminOrders() {
   const { data: products } = useListProducts();
 
   const productImageMap = Object.fromEntries(
-    (products ?? []).map(p => [p.id, p.images?.[0] ?? null])
+    (products ?? []).map(p => [p.id, p.imageUrl ?? null])
   );
 
   const handleStatusChange = (orderId: number, newStatus: UpdateOrderStatusBodyStatus) => {
