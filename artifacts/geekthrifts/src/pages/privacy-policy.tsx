@@ -65,7 +65,7 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="font-serif text-lg font-bold text-gray-900 mb-3">6. Your Rights</h2>
-            <p>You may request access to, correction of, or deletion of your personal data at any time by contacting us on Instagram <a href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==" target="_blank" rel="noopener noreferrer" className="text-gray-900 underline underline-offset-2 hover:text-gray-500 transition-colors">@geek.thrifts</a>.</p>
+            <p>You may request access to, correction of, or deletion of your personal data at any time by emailing us at <a href="mailto:geekthriftsstore@gmail.com" className="text-gray-900 underline underline-offset-2 hover:text-gray-500 transition-colors">geekthriftsstore@gmail.com</a>.</p>
           </section>
 
           <section>
@@ -75,7 +75,7 @@ export default function PrivacyPolicy() {
 
           <section>
             <h2 className="font-serif text-lg font-bold text-gray-900 mb-3">8. Contact</h2>
-            <p>For any privacy-related queries, contact us on Instagram <a href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==" target="_blank" rel="noopener noreferrer" className="text-gray-900 underline underline-offset-2 hover:text-gray-500 transition-colors">@geek.thrifts</a>.</p>
+            <p>For any privacy-related queries, email us at <a href="mailto:geekthriftsstore@gmail.com" className="text-gray-900 underline underline-offset-2 hover:text-gray-500 transition-colors">geekthriftsstore@gmail.com</a>.</p>
           </section>
         </div>
 

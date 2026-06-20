@@ -53,7 +53,7 @@ export default function ReturnPolicy() {
 
           <section>
             <h2 className="font-serif text-lg font-bold text-gray-900 mb-3">How to Return</h2>
-            <p>To initiate a return, contact us on Instagram <a href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==" target="_blank" rel="noopener noreferrer" className="text-gray-900 underline underline-offset-2 hover:text-gray-500 transition-colors">@geek.thrifts</a> within 3 days of receiving your order. Include your order details and photos of the issue. Our team will guide you through the process.</p>
+            <p>To initiate a return, email us at <a href="mailto:geekthriftsstore@gmail.com" className="text-gray-900 underline underline-offset-2 hover:text-gray-500 transition-colors">geekthriftsstore@gmail.com</a> or message us on Instagram <a href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==" target="_blank" rel="noopener noreferrer" className="text-gray-900 underline underline-offset-2 hover:text-gray-500 transition-colors">@geek.thrifts</a> within 3 days of receiving your order. Include your order details and photos of the issue.</p>
           </section>
 
           <section>

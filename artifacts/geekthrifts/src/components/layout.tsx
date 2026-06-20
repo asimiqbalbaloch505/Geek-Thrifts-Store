@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import logoImg from "@assets/WhatsApp_Image_2026-06-19_at_21.50.52_1781941051375.jpeg";
 import { useCart } from "@/hooks/use-cart";
 import { useUserAuth } from "@/hooks/use-user-auth";
 import { Menu, X, ShoppingBag, User, LogOut, ChevronDown, ArrowRight } from "lucide-react";
@@ -183,8 +184,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="max-w-[1400px] mx-auto px-4 lg:px-10 h-14 flex items-center gap-8">
 
           {/* Logo */}
-          <Link href="/" className="flex-shrink-0 text-[22px] font-bold tracking-tight text-gray-900 font-serif">
-            GeekThrifts
+          <Link href="/" className="flex-shrink-0">
+            <img src={logoImg} alt="GeekThrifts" className="h-10 w-auto object-contain" />
           </Link>
 
           {/* Desktop Nav — visible at 900px+ */}
@@ -420,8 +421,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3">Customer Care</p>
             <ul className="space-y-2.5">
               <li><span className="text-[12px] text-gray-500">COD Only — No Online Payment</span></li>
+              <li><a href="mailto:geekthriftsstore@gmail.com" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Email Us</a></li>
               <li><a href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==" target="_blank" rel="noopener noreferrer" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Instagram</a></li>
-              <li><a href="https://facebook.com" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Facebook</a></li>
+              <li><a href="https://www.facebook.com/people/Geek-Thrifts-Store/61578288207386/" target="_blank" rel="noopener noreferrer" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Facebook</a></li>
               {!isUserLoggedIn && (
                 <li><Link href="/signup" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Create Account</Link></li>
               )}

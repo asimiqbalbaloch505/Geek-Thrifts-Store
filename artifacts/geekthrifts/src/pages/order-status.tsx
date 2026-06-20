@@ -38,7 +38,7 @@ export default function OrderStatus() {
 
           <section>
             <h2 className="font-serif text-lg font-bold text-gray-900 mb-3">Contact Us</h2>
-            <p>For any order-related queries, reach us on Instagram <a href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==" target="_blank" rel="noopener noreferrer" className="text-gray-900 underline underline-offset-2 hover:text-gray-500 transition-colors">@geek.thrifts</a>. We typically respond within a few hours.</p>
+            <p>For any order-related queries, email us at <a href="mailto:geekthriftsstore@gmail.com" className="text-gray-900 underline underline-offset-2 hover:text-gray-500 transition-colors">geekthriftsstore@gmail.com</a> or reach us on Instagram <a href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==" target="_blank" rel="noopener noreferrer" className="text-gray-900 underline underline-offset-2 hover:text-gray-500 transition-colors">@geek.thrifts</a>. We typically respond within a few hours.</p>
           </section>
         </div>
 

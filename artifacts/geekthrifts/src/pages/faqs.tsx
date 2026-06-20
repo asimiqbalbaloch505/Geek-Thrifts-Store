@@ -76,14 +76,22 @@ export default function FAQs() {
 
         <div className="mt-12 pt-8 border-t border-gray-100">
           <p className="text-[14px] text-gray-500 mb-4">Still have questions?</p>
-          <a
-            href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA=="
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block h-11 px-7 bg-gray-900 text-white text-[12px] uppercase tracking-[0.12em] font-semibold hover:bg-gray-800 transition-colors leading-[44px]"
-          >
-            Message Us on Instagram
-          </a>
+          <div className="flex flex-wrap gap-3">
+            <a
+              href="mailto:geekthriftsstore@gmail.com"
+              className="inline-block h-11 px-7 bg-gray-900 text-white text-[12px] uppercase tracking-[0.12em] font-semibold hover:bg-gray-800 transition-colors leading-[44px]"
+            >
+              Email Us
+            </a>
+            <a
+              href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA=="
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block h-11 px-7 border border-gray-900 text-gray-900 text-[12px] uppercase tracking-[0.12em] font-semibold hover:bg-gray-50 transition-colors leading-[44px]"
+            >
+              Instagram
+            </a>
+          </div>
         </div>
 
         <div className="mt-8">
