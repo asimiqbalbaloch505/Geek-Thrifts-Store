@@ -132,6 +132,12 @@ export const ListProductsResponseItem = zod.object({
   categoryId: zod.number(),
   categoryName: zod.string(),
   sizes: zod.array(zod.string()),
+  sizeInventory: zod.array(
+    zod.object({
+      size: zod.string(),
+      qty: zod.number(),
+    }),
+  ),
   stock: zod.number(),
   isActive: zod.boolean(),
   isFeatured: zod.boolean(),
@@ -149,6 +155,12 @@ export const CreateProductBody = zod.object({
   imageUrl: zod.string().nullish(),
   categoryId: zod.number(),
   sizes: zod.array(zod.string()),
+  sizeInventory: zod.array(
+    zod.object({
+      size: zod.string(),
+      qty: zod.number(),
+    }),
+  ),
   stock: zod.number(),
   isActive: zod.boolean(),
   isFeatured: zod.boolean(),
@@ -170,6 +182,12 @@ export const GetProductResponse = zod.object({
   categoryId: zod.number(),
   categoryName: zod.string(),
   sizes: zod.array(zod.string()),
+  sizeInventory: zod.array(
+    zod.object({
+      size: zod.string(),
+      qty: zod.number(),
+    }),
+  ),
   stock: zod.number(),
   isActive: zod.boolean(),
   isFeatured: zod.boolean(),
@@ -190,6 +208,12 @@ export const UpdateProductBody = zod.object({
   imageUrl: zod.string().nullish(),
   categoryId: zod.number(),
   sizes: zod.array(zod.string()),
+  sizeInventory: zod.array(
+    zod.object({
+      size: zod.string(),
+      qty: zod.number(),
+    }),
+  ),
   stock: zod.number(),
   isActive: zod.boolean(),
   isFeatured: zod.boolean(),
@@ -204,6 +228,12 @@ export const UpdateProductResponse = zod.object({
   categoryId: zod.number(),
   categoryName: zod.string(),
   sizes: zod.array(zod.string()),
+  sizeInventory: zod.array(
+    zod.object({
+      size: zod.string(),
+      qty: zod.number(),
+    }),
+  ),
   stock: zod.number(),
   isActive: zod.boolean(),
   isFeatured: zod.boolean(),

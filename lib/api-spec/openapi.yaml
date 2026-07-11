@@ -511,6 +511,15 @@ components:
           type: boolean
       required: [name, slug, isActive]
 
+    SizeInventoryItem:
+      type: object
+      properties:
+        size:
+          type: string
+        qty:
+          type: integer
+      required: [size, qty]
+
     Product:
       type: object
       properties:
@@ -534,6 +543,10 @@ components:
           type: array
           items:
             type: string
+        sizeInventory:
+          type: array
+          items:
+            $ref: "#/components/schemas/SizeInventoryItem"
         stock:
           type: integer
         isActive:
@@ -542,7 +555,7 @@ components:
           type: boolean
         createdAt:
           type: string
-      required: [id, name, price, categoryId, categoryName, sizes, stock, isActive, isFeatured, createdAt]
+      required: [id, name, price, categoryId, categoryName, sizes, sizeInventory, stock, isActive, isFeatured, createdAt]
 
     CreateProductBody:
       type: object
@@ -563,13 +576,17 @@ components:
           type: array
           items:
             type: string
+        sizeInventory:
+          type: array
+          items:
+            $ref: "#/components/schemas/SizeInventoryItem"
         stock:
           type: integer
         isActive:
           type: boolean
         isFeatured:
           type: boolean
-      required: [name, price, categoryId, sizes, stock, isActive, isFeatured]
+      required: [name, price, categoryId, sizes, sizeInventory, stock, isActive, isFeatured]
 
     OrderItem:
       type: object

@@ -5,6 +5,7 @@
  * GeekThrifts ecommerce API
  * OpenAPI spec version: 0.1.0
  */
+import type { SizeInventoryItem } from "./sizeInventoryItem";
 
 export interface Product {
   id: number;
@@ -15,6 +16,7 @@ export interface Product {
   categoryId: number;
   categoryName: string;
   sizes: string[];
+  sizeInventory: SizeInventoryItem[];
   stock: number;
   isActive: boolean;
   isFeatured: boolean;

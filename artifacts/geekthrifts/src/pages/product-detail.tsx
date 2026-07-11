@@ -8,7 +8,10 @@ import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
 import { Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
 
-/* ── Tie size guide data ── */
+type SizeInventoryItem = { size: string; qty: number };
+
+const NO_SIZE_SLUGS = new Set(["watches", "belts"]);
+
 const TIE_LENGTH_GUIDE = [
   { label: "Regular", inches: '57–58"', cm: "145–147 cm", for: '5\'8"–6\'0" (173–183 cm)' },
   { label: "Short", inches: '55–56"', cm: "140–142 cm", for: 'Under 5\'7" (170 cm)' },
@@ -33,10 +36,8 @@ function TieSizeGuide() {
         Tie Size Guide
         {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
       </button>
-
       {open && (
         <div className="border border-gray-100 text-[11px] mb-4">
-          {/* Length */}
           <div className="px-3 py-2 bg-gray-50 text-[10px] uppercase tracking-[0.12em] font-bold text-gray-500">Length</div>
           <div className="grid grid-cols-4 px-3 py-1.5 bg-gray-50/60 font-semibold uppercase tracking-[0.06em] text-gray-400 border-b border-gray-100 text-[10px]">
             <span>Name</span><span>Inches</span><span>cm</span><span>Best For</span>
@@ -49,8 +50,6 @@ function TieSizeGuide() {
               <span>{row.for}</span>
             </div>
           ))}
-
-          {/* Width */}
           <div className="px-3 py-2 bg-gray-50 text-[10px] uppercase tracking-[0.12em] font-bold text-gray-500 border-t border-gray-100">Width</div>
           <div className="grid grid-cols-4 px-3 py-1.5 bg-gray-50/60 font-semibold uppercase tracking-[0.06em] text-gray-400 border-b border-gray-100 text-[10px]">
             <span>Name</span><span>Inches</span><span>cm</span><span>Best For</span>
@@ -63,7 +62,6 @@ function TieSizeGuide() {
               <span>{row.for}</span>
             </div>
           ))}
-
           <div className="px-3 py-2 bg-gray-50 text-gray-400 text-[10px] tracking-wide border-t border-gray-100">
             Tip: The tie tip should land at the middle of your belt buckle when tied.
           </div>
@@ -84,33 +82,47 @@ export default function ProductDetail() {
   });
 
   const [selectedSize, setSelectedSize] = useState<string>("");
-  const [selectedWidth, setSelectedWidth] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
 
-  const isTie = product?.categoryName?.toLowerCase() === "ties";
-  const hasSizeChoice = product?.sizes && product.sizes.length > 0 && !(product.sizes.length === 1 && product.sizes[0] === "One Size");
-  const hasWidthChoice = isTie && product?.widths && product.widths.length > 0;
+  const categorySlug = product?.categoryName?.toLowerCase() ?? "";
+  const isNoSize = NO_SIZE_SLUGS.has(categorySlug);
+  const isTie = categorySlug === "ties";
+  const isShoe = categorySlug === "shoes";
+
+  const sizeInventory = ((product as any)?.sizeInventory ?? []) as SizeInventoryItem[];
+  const hasSizeInventory = sizeInventory.length > 0;
+
+  // Total stock: sum of all sizes, or flat stock for no-size categories
+  const totalStock = product?.stock ?? 0;
+
+  // Stock for selected size
+  const selectedSizeItem = hasSizeInventory
+    ? sizeInventory.find(s => s.size === selectedSize)
+    : null;
+  const selectedSizeStock = selectedSizeItem?.qty ?? 0;
+
+  // Max qty the user can order
+  const maxQty = hasSizeInventory && selectedSize
+    ? selectedSizeStock
+    : totalStock;
 
   const handleAddToCart = () => {
     if (!product) return;
-    if (hasSizeChoice && !selectedSize) {
-      toast({ title: "Select a length", description: "Please choose a tie length before adding to cart.", variant: "destructive" });
+
+    if (hasSizeInventory && !selectedSize) {
+      toast({ title: "Select a size", description: "Please choose a size before adding to cart.", variant: "destructive" });
       return;
     }
-    if (hasWidthChoice && !selectedWidth) {
-      toast({ title: "Select a width", description: "Please choose a tie width before adding to cart.", variant: "destructive" });
+    if (hasSizeInventory && selectedSizeStock === 0) {
+      toast({ title: "Size unavailable", description: "This size is currently out of stock.", variant: "destructive" });
+      return;
+    }
+    if (!hasSizeInventory && !isNoSize && totalStock === 0) {
+      toast({ title: "Out of stock", description: "This product is currently out of stock.", variant: "destructive" });
       return;
     }
 
-    let sizeLabel: string;
-    if (isTie && selectedSize && selectedWidth) {
-      const shortLen = selectedSize.replace(/\s*\(.*?\)/, "").trim();
-      const shortWid = selectedWidth.replace(/\s*\(.*?\)/, "").trim();
-      sizeLabel = `${shortLen} / ${shortWid}`;
-    } else {
-      sizeLabel = selectedSize || "One Size";
-    }
-
+    const sizeLabel = selectedSize || "One Size";
     addToCart(product, sizeLabel, quantity);
     toast({ title: "Added to cart", description: `${quantity}x ${product.name} added to your cart.` });
   };
@@ -149,6 +161,8 @@ export default function ProductDetail() {
     );
   }
 
+  const isCompletelyOutOfStock = totalStock === 0;
+
   return (
     <Layout>
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 md:py-16">
@@ -177,14 +191,14 @@ export default function ProductDetail() {
                 No Image
               </div>
             )}
-            {product.stock === 0 && (
+            {isCompletelyOutOfStock && (
               <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                <span className="text-[13px] uppercase tracking-widest font-semibold text-gray-700">Sold Out</span>
+                <span className="text-[13px] uppercase tracking-widest font-semibold text-gray-700">Out of Stock</span>
               </div>
             )}
-            {product.stock > 0 && product.stock <= 2 && (
+            {!isCompletelyOutOfStock && totalStock <= 2 && (
               <span className="absolute top-3 left-3 bg-gray-900 text-white text-[10px] px-2.5 py-1 uppercase tracking-wider font-semibold">
-                Last {product.stock}
+                Last {totalStock}
               </span>
             )}
           </div>
@@ -203,84 +217,79 @@ export default function ProductDetail() {
               {product.description ?? "A carefully selected piece from GeekThrifts. Authenticated, cleaned, and pressed for the modern Pakistani professional."}
             </p>
 
-            {/* Length (ties) / Size (shirts & shoes) */}
-            {hasSizeChoice && (
-              <div className="mb-5">
+            {/* Size selector — only for categories with sizes */}
+            {hasSizeInventory && (
+              <div className="mb-6">
                 <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">
-                  {isTie ? "Tie Length" : "Size"}
+                  {isShoe ? "Shoe Size (UK)" : "Size"}
                   {selectedSize && (
                     <span className="ml-2 text-gray-400 normal-case tracking-normal font-normal">
-                      — {selectedSize.replace(/\s*\(.*?\)/, "").trim()}
+                      — {isShoe ? `UK ${selectedSize}` : selectedSize}
                     </span>
                   )}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {product.sizes.map((size) => {
-                    const shortLabel = isTie ? size.replace(/\s*\(.*?\)/, "").trim() : size;
+                  {sizeInventory.map(({ size, qty }) => {
+                    const isOutOfStock = qty === 0;
+                    const isSelected = selectedSize === size;
+                    const label = isShoe ? `UK ${size}` : size;
                     return (
                       <button
                         key={size}
-                        onClick={() => setSelectedSize(size)}
-                        title={size}
-                        className={`h-10 px-3 border text-[11px] font-semibold uppercase tracking-wide transition-colors whitespace-nowrap ${
-                          selectedSize === size
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-white text-gray-700 border-gray-200 hover:border-gray-900"
+                        onClick={() => {
+                          if (isOutOfStock) {
+                            toast({ title: "Size unavailable", description: `${label} is currently out of stock.`, variant: "destructive" });
+                            return;
+                          }
+                          setSelectedSize(size);
+                          setQuantity(1);
+                        }}
+                        title={isOutOfStock ? "Out of stock" : label}
+                        className={`h-10 px-3 border text-[11px] font-semibold uppercase tracking-wide transition-colors whitespace-nowrap relative ${
+                          isOutOfStock
+                            ? "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50"
+                            : isSelected
+                              ? "bg-gray-900 text-white border-gray-900"
+                              : "bg-white text-gray-700 border-gray-200 hover:border-gray-900"
                         }`}
                       >
-                        {shortLabel}
+                        {label}
+                        {isOutOfStock && (
+                          <span className="absolute -top-1.5 -right-1.5 text-[8px] bg-gray-400 text-white px-1 rounded-none font-bold uppercase leading-tight">
+                            Out
+                          </span>
+                        )}
                       </button>
                     );
                   })}
                 </div>
+                {selectedSize && selectedSizeStock > 0 && selectedSizeStock <= 3 && (
+                  <p className="text-[11px] text-amber-600 font-semibold mt-2 uppercase tracking-wide">
+                    Only {selectedSizeStock} left in this size
+                  </p>
+                )}
               </div>
             )}
 
-            {/* Width — ties only */}
-            {hasWidthChoice && (
-              <div className="mb-5">
-                <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">
-                  Tie Width
-                  {selectedWidth && (
-                    <span className="ml-2 text-gray-400 normal-case tracking-normal font-normal">
-                      — {selectedWidth.replace(/\s*\(.*?\)/, "").trim()}
-                    </span>
-                  )}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {product.widths.map((width) => {
-                    const shortLabel = width.replace(/\s*\(.*?\)/, "").trim();
-                    return (
-                      <button
-                        key={width}
-                        onClick={() => setSelectedWidth(width)}
-                        title={width}
-                        className={`h-10 px-3 border text-[11px] font-semibold uppercase tracking-wide transition-colors whitespace-nowrap ${
-                          selectedWidth === width
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-white text-gray-700 border-gray-200 hover:border-gray-900"
-                        }`}
-                      >
-                        {shortLabel}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Size guide (ties only) */}
+            {/* Size guide for ties */}
             {isTie && <TieSizeGuide />}
 
             {/* Quantity */}
             <div className="mb-6">
               <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">Quantity</p>
               <div className="flex items-center border border-gray-200 w-fit">
-                <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                <button
+                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                  className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
                 <span className="w-10 text-center text-[14px] font-semibold">{quantity}</span>
-                <button onClick={() => setQuantity(q => Math.min(product.stock, q + 1))} className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                <button
+                  onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
+                  disabled={maxQty === 0}
+                  className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30"
+                >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -288,10 +297,10 @@ export default function ProductDetail() {
 
             <button
               onClick={handleAddToCart}
-              disabled={product.stock === 0}
+              disabled={isCompletelyOutOfStock || (hasSizeInventory && selectedSize !== "" && selectedSizeStock === 0)}
               className="h-12 w-full bg-gray-900 text-white text-[12px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed mb-4"
             >
-              {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+              {isCompletelyOutOfStock ? "Out of Stock" : "Add to Cart"}
             </button>
 
             <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100 mt-4">

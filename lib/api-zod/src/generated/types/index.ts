@@ -26,6 +26,7 @@ export * from "./orderItem";
 export * from "./orderStatus";
 export * from "./product";
 export * from "./signupBody";
+export * from "./sizeInventoryItem";
 export * from "./successResponse";
 export * from "./updateOrderStatusBody";
 export * from "./updateOrderStatusBodyStatus";

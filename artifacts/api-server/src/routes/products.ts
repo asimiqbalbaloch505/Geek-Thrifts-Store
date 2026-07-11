@@ -14,12 +14,18 @@ import {
 const router = Router();
 
 function mapProduct(product: typeof productsTable.$inferSelect, categoryName: string) {
+  const sizeInventory = (product.sizeInventory ?? []) as Array<{ size: string; qty: number }>;
+  const totalStock = sizeInventory.length > 0
+    ? sizeInventory.reduce((sum, s) => sum + s.qty, 0)
+    : product.stock;
   return {
     ...product,
     price: Number(product.price),
     categoryName,
     subcategory: product.subcategory ?? null,
     sizes: product.sizes ?? [],
+    sizeInventory,
+    stock: totalStock,
     createdAt: product.createdAt.toISOString(),
   };
 }

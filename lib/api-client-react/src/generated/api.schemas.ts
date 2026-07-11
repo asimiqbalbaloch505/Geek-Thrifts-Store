@@ -60,6 +60,11 @@ export interface CreateCategoryBody {
   isActive: boolean;
 }
 
+export interface SizeInventoryItem {
+  size: string;
+  qty: number;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -69,6 +74,7 @@ export interface Product {
   categoryId: number;
   categoryName: string;
   sizes: string[];
+  sizeInventory: SizeInventoryItem[];
   stock: number;
   isActive: boolean;
   isFeatured: boolean;
@@ -82,6 +88,7 @@ export interface CreateProductBody {
   imageUrl?: string | null;
   categoryId: number;
   sizes: string[];
+  sizeInventory: SizeInventoryItem[];
   stock: number;
   isActive: boolean;
   isFeatured: boolean;
