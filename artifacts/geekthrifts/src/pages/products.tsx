@@ -42,7 +42,7 @@ export default function Products() {
   );
 
   const products = subcategoryParam && allProducts
-    ? allProducts.filter(p => p.subcategory?.toLowerCase() === subcategoryParam.toLowerCase())
+    ? allProducts.filter(p => (p as unknown as { subcategory?: string }).subcategory?.toLowerCase() === subcategoryParam.toLowerCase())
     : allProducts;
 
   const activeCategory = categoryId ? categories?.find(c => c.id === categoryId) : null;
@@ -157,9 +157,9 @@ export default function Products() {
                       Last {product.stock}
                     </span>
                   )}
-                  {product.subcategory && (
+                  {(product as unknown as { subcategory?: string }).subcategory && (
                     <span className="absolute top-2 right-2 bg-white/90 text-gray-600 text-[9px] px-1.5 py-0.5 uppercase tracking-wider font-medium">
-                      {product.subcategory}
+                      {(product as unknown as { subcategory?: string }).subcategory}
                     </span>
                   )}
                 </div>

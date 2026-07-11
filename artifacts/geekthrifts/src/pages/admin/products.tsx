@@ -10,7 +10,7 @@ import {
   Product,
 } from "@workspace/api-client-react";
 import { formatPKR, getImageUrl } from "@/lib/utils";
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useForm, useWatch } from "react-hook-form";
@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Edit, Plus, Trash2, Upload, X, Loader2 } from "lucide-react";
+import { Edit, Plus, Trash2 } from "lucide-react";
 
 type SizeInventoryItem = { size: string; qty: number };
 
@@ -80,8 +80,6 @@ export default function AdminProducts() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: products, isLoading } = useListProducts(undefined, {
     query: { queryKey: getListProductsQueryKey() },
@@ -120,30 +118,6 @@ export default function AdminProducts() {
       form.setValue("sizes", []);
     }
   }, [categorySlug, isNoSize, form]);
-
-  const uploadImage = async (file: File) => {
-    if (!categorySlug) { alert("Please select a category first"); return; }
-    setIsUploading(true);
-    try {
-      const adminToken = localStorage.getItem("adminToken") ?? "";
-      const formData = new FormData();
-      formData.append("file", file);
-      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const res = await fetch(`${base}/api/upload?category=${categorySlug}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${adminToken}` },
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json() as { imageUrl: string };
-      form.setValue("imageUrl", data.imageUrl);
-      setImagePreview(data.imageUrl);
-    } catch {
-      alert("Image upload failed. Please try again.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   const openAddDialog = () => {
     setEditingProduct(null);
@@ -414,73 +388,35 @@ export default function AdminProducts() {
                   )}
                 </div>
 
-                {/* Right column — image upload */}
+                {/* Right column — image URL */}
                 <div className="space-y-4">
                   <FormField control={form.control} name="imageUrl" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Image</FormLabel>
-
-                      {(imagePreview || field.value) ? (
-                        <div className="relative aspect-[4/3] bg-muted border border-border overflow-hidden group/img">
+                      <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Image URL</FormLabel>
+                      <FormControl>
+                        <Input
+                          className="rounded-none border-border text-xs"
+                          placeholder="https://i.imgur.com/example.jpg"
+                          {...field}
+                          onChange={e => {
+                            field.onChange(e);
+                            setImagePreview(e.target.value);
+                          }}
+                        />
+                      </FormControl>
+                      <p className="text-[10px] text-muted-foreground">
+                        Paste a direct image link from Imgur, Cloudinary, or any image host.
+                      </p>
+                      {(imagePreview || field.value) && (
+                        <div className="aspect-[4/3] bg-muted border border-border overflow-hidden mt-2">
                           <img
-                            src={getImageUrl(imagePreview || field.value)}
+                            src={getImageUrl(imagePreview || field.value || "")}
                             alt="Preview"
                             className="w-full h-full object-cover"
+                            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
                           />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => fileInputRef.current?.click()}
-                              className="bg-white text-black text-[10px] uppercase tracking-widest font-bold px-3 py-2 hover:bg-gray-100"
-                            >
-                              Change
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { field.onChange(""); setImagePreview(""); }}
-                              className="bg-white text-black p-2 hover:bg-gray-100"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
                         </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!categorySlug) { alert("Select a category first"); return; }
-                            fileInputRef.current?.click();
-                          }}
-                          className="w-full aspect-[4/3] border-2 border-dashed border-border flex flex-col items-center justify-center gap-3 hover:border-gray-400 hover:bg-muted/30 transition-colors"
-                        >
-                          {isUploading ? (
-                            <>
-                              <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
-                              <span className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Uploading...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="w-8 h-8 text-muted-foreground" />
-                              <div className="text-center">
-                                <p className="text-[11px] uppercase tracking-widest font-bold text-muted-foreground">Click to upload image</p>
-                                <p className="text-[10px] text-muted-foreground mt-1">JPG, PNG, WebP — max 10MB</p>
-                              </div>
-                            </>
-                          )}
-                        </button>
                       )}
-
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={e => {
-                          const file = e.target.files?.[0];
-                          if (file) uploadImage(file);
-                          e.target.value = "";
-                        }}
-                      />
                       <FormMessage className="text-[10px]" />
                     </FormItem>
                   )} />
@@ -516,7 +452,7 @@ export default function AdminProducts() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="rounded-none font-bold uppercase text-xs tracking-widest">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending || isUploading} className="rounded-none font-bold uppercase text-xs tracking-widest px-8">
+                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending} className="rounded-none font-bold uppercase text-xs tracking-widest px-8">
                   {editingProduct ? "Update Product" : "Create Product"}
                 </Button>
               </div>

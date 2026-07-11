@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../.. && pnpm install && pnpm run typecheck:libs && pnpm --filter @workspace/geekthrifts run build",
+  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/geekthrifts run build",
   "outputDirectory": "dist/public",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
