@@ -1,0 +1,105 @@
+Since this project was created in Replit and uses a **pnpm workspace**, let's first identify exactly **where the backend is**, what framework it's using, and how it's should be deployed. Once we know that, we can configure Vercel correctly.
+
+## Step 1: Run these commands in the Replit Shell
+
+### Find all package.json files
+
+```bash
+find . -name "package.json"
+```
+
+### Find Vercel configuration files
+
+```bash
+find . -name "vercel.json"
+```
+
+### Find the backend entry point
+
+```bash
+find . \( -name "index.ts" -o -name "server.ts" -o -name "app.ts" -o -name "main.ts" -o -name "index.js" -o -name "server.js" \)
+```
+
+### Find all Vite configs (to locate the frontend)
+
+```bash
+find . -name "vite.config.*"
+```
+
+### Show the folder structure (2 levels deep)
+
+If `tree` is installed:
+
+```bash
+tree -L 2
+```
+
+Otherwise:
+
+```bash
+find . -maxdepth 2 -type d
+```
+
+---
+
+## Step 2: Find which package has the backend
+
+Run:
+
+```bash
+find . -name package.json -exec sh -c 'echo "===== $1 ====="; cat "$1"' _ {} \;
+```
+
+This will print every `package.json` in your workspace.
+
+---
+
+## Step 3: Check what Vercel is trying to build
+
+Run:
+
+```bash
+pnpm build
+```
+
+Copy the complete output.
+
+---
+
+## Step 4: Paste the outputs here
+
+Please paste the output of:
+
+1. `find . -name "package.json"`
+2. `find . -name "vercel.json"`
+3. `find . -name "vite.config.*"`
+4. `find . \( -name "index.ts" -o -name "server.ts" -o -name "app.ts" -o -name "main.ts" \)`
+5. `pnpm build`
+
+---
+
+## I already know one thing
+
+From your deployment log:
+
+```
+Cloning github.com/asimiqbalbaloch505/Geek-Thrifts-Store
+```
+
+This confirms:
+
+* ✅ Replit → GitHub is working.
+* ✅ GitHub → Vercel automatic deployment is working.
+
+So **do not spend more time debugging GitHub or webhooks**. The only remaining issue is configuring Vercel for your backend project.
+
+Once you share the outputs above, I'll tell you the exact:
+
+* Root Directory
+* Build Command
+* Install Command
+* Output Directory (if any)
+* Framework Preset
+* Any `vercel.json` changes needed
+
+based on your project's actual structure.
