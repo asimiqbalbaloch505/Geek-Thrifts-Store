@@ -2,26 +2,21 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { seedIfEmpty } from "./lib/seed";
 
-const rawPort = process.env["PORT"];
+// Vercel / Production par fallback port (e.g. 3000 ya 5000) allow karein crash karne ke bajaye
+const port = Number(process.env["PORT"]) || 3000;
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-app.listen(port, async (err) => {
+app.listen(port, async (err?: any) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
 
   logger.info({ port }, "Server listening");
-  await seedIfEmpty();
+  try {
+    await seedIfEmpty();
+  } catch (seedErr) {
+    logger.error({ seedErr }, "Seeding failed, but server continues running");
+  }
 });
+
+export default app;
