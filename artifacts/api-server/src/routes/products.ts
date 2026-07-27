@@ -62,10 +62,13 @@ router.get("/", async (req, res): Promise<void> => {
       .orderBy(productsTable.createdAt);
 
     res.json(products.map(({ product, categoryName }) => mapProduct(product, categoryName ?? "Unknown")));
-  } catch (err) {
-    req.log.error({ err }, "Failed to list products");
-    res.status(500).json({ error: "Internal server error" });
-  }
+  }} catch (err: any) {
+  req.log.error({ err }, "Failed to list products");
+  res.status(500).json({ 
+    error: "Internal server error", 
+    details: err?.message || String(err) 
+  });
+}
 });
 
 router.post("/", async (req, res): Promise<void> => {
