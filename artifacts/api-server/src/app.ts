@@ -25,19 +25,30 @@ app.use(
     },
   }),
 );
-const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL]
-  : ["*"];
+
+// Safe CORS handling (strips trailing slashes if present in env URL)
+const rawFrontendUrl = process.env.FRONTEND_URL?.replace(/\/$/, "");
+
+const allowedOrigins = rawFrontendUrl
+  ? [rawFrontendUrl, "http://localhost:3000", "http://localhost:5173"]
+  : "*";
 
 app.use(
   cors({
-    origin: allowedOrigins[0] === "*" ? "*" : allowedOrigins,
+    origin: allowedOrigins,
     credentials: true,
   }),
 );
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// Fallback Global Error Handler for Vercel/Pino Logging
+app.use((err: any, req: any, res: any, next: any) => {
+  logger.error({ err }, "Unhandled route error");
+  res.status(500).json({ error: err?.message || "Internal server error" });
+});
 
 export default app;

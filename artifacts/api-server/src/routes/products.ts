@@ -18,6 +18,12 @@ function mapProduct(product: typeof productsTable.$inferSelect, categoryName: st
   const totalStock = sizeInventory.length > 0
     ? sizeInventory.reduce((sum, s) => sum + s.qty, 0)
     : product.stock;
+
+  // Safe Date conversion (String ho ya Date, crash nahi hoga)
+  const createdAtString = product.createdAt 
+    ? new Date(product.createdAt).toISOString() 
+    : new Date().toISOString();
+
   return {
     ...product,
     price: Number(product.price),
@@ -26,7 +32,7 @@ function mapProduct(product: typeof productsTable.$inferSelect, categoryName: st
     sizes: product.sizes ?? [],
     sizeInventory,
     stock: totalStock,
-    createdAt: product.createdAt.toISOString(),
+    createdAt: createdAtString,
   };
 }
 
