@@ -19,7 +19,6 @@ function mapProduct(product: typeof productsTable.$inferSelect, categoryName: st
     ? sizeInventory.reduce((sum, s) => sum + s.qty, 0)
     : product.stock;
 
-  // Safe Date conversion (String ho ya Date, crash nahi hoga)
   const createdAtString = product.createdAt 
     ? new Date(product.createdAt).toISOString() 
     : new Date().toISOString();
@@ -62,13 +61,13 @@ router.get("/", async (req, res): Promise<void> => {
       .orderBy(productsTable.createdAt);
 
     res.json(products.map(({ product, categoryName }) => mapProduct(product, categoryName ?? "Unknown")));
-  }} catch (err: any) {
-  req.log.error({ err }, "Failed to list products");
-  res.status(500).json({ 
-    error: "Internal server error", 
-    details: err?.message || String(err) 
-  });
-}
+  } catch (err: any) {
+    req.log?.error?.({ err }, "Failed to list products");
+    res.status(500).json({ 
+      error: "Internal server error", 
+      details: err?.message || String(err) 
+    });
+  }
 });
 
 router.post("/", async (req, res): Promise<void> => {
@@ -85,7 +84,7 @@ router.post("/", async (req, res): Promise<void> => {
     const category = await db.select().from(categoriesTable).where(eq(categoriesTable.id, product.categoryId)).limit(1);
     res.status(201).json(mapProduct(product, category[0]?.name ?? "Unknown"));
   } catch (err) {
-    req.log.error({ err }, "Failed to create product");
+    req.log?.error?.({ err }, "Failed to create product");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -109,7 +108,7 @@ router.get("/:id", async (req, res): Promise<void> => {
     }
     res.json(mapProduct(row.product, row.categoryName ?? "Unknown"));
   } catch (err) {
-    req.log.error({ err }, "Failed to get product");
+    req.log?.error?.({ err }, "Failed to get product");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -138,7 +137,7 @@ router.put("/:id", async (req, res): Promise<void> => {
     const category = await db.select().from(categoriesTable).where(eq(categoriesTable.id, updated.categoryId)).limit(1);
     res.json(mapProduct(updated, category[0]?.name ?? "Unknown"));
   } catch (err) {
-    req.log.error({ err }, "Failed to update product");
+    req.log?.error?.({ err }, "Failed to update product");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -153,7 +152,7 @@ router.delete("/:id", async (req, res): Promise<void> => {
     await db.delete(productsTable).where(eq(productsTable.id, paramsParsed.data.id));
     res.json({ success: true, message: "Product deleted" });
   } catch (err) {
-    req.log.error({ err }, "Failed to delete product");
+    req.log?.error?.({ err }, "Failed to delete product");
     res.status(500).json({ error: "Internal server error" });
   }
 });
