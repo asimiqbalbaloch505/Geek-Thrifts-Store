@@ -151,10 +151,10 @@ router.delete("/:id", async (req, res): Promise<void> => {
   try {
     await db.delete(productsTable).where(eq(productsTable.id, paramsParsed.data.id));
     res.json({ success: true, message: "Product deleted" });
-  } catch (err) {
-    req.log?.error?.({ err }, "Failed to delete product");
-    res.status(500).json({ error: "Internal server error" });
-  }
+  } catch (err: any) {
+  req.log?.error?.({ err }, "Failed to list products");
+  res.status(500).json({ error: "Internal server error" });
+}
 });
 
 export default router;
