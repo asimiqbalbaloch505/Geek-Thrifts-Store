@@ -2,13 +2,12 @@ import { pgTable, serial, text, boolean, timestamp, integer, AnyPgColumn } from 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const categoriesTable = pgTable("categories", {
+export const categoriesTable: any = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description"),
   imageUrl: text("image_url"),
-  // 👈 Fix: AnyPgColumn type casting adds explicit type to prevent TS circular error
   parentId: integer("parent_id").references((): AnyPgColumn => categoriesTable.id, { onDelete: "cascade" }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
