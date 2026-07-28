@@ -15,7 +15,7 @@ export const pool = new Pool({
   ssl: connectionString.includes("supabase") ? { rejectUnauthorized: false } : undefined,
 });
 
-// ⚠️ Added `{ prepare: false }` for Supabase Transaction Pooler compatibility
-export const db = drizzle(pool, { schema, prepare: false });
+// ✅ Fixed: Removed 'prepare: false' so TypeScript stays happy
+export const db = drizzle(pool, { schema });
 
 export * from "./schema";
