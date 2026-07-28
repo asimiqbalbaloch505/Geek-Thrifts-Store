@@ -2,8 +2,9 @@ import { Link, useLocation } from "wouter";
 import logoImg from "@assets/WhatsApp_Image_2026-06-19_at_21.50.52_1781941051375.jpeg";
 import { useCart } from "@/hooks/use-cart";
 import { useUserAuth } from "@/hooks/use-user-auth";
-import { Menu, X, ShoppingBag, User, LogOut, ChevronDown, ArrowRight } from "lucide-react";
-import { useState, useRef } from "react";
+import { useListCategories, getListCategoriesQueryKey, Category } from "@workspace/api-client-react";
+import { Menu, X, ShoppingBag, User, LogOut, ChevronDown } from "lucide-react";
+import { useState, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   DropdownMenu,
@@ -13,155 +14,36 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/* ─────────────────────────────────────────────────────────
-   Nav data
-───────────────────────────────────────────────────────── */
-interface SubItem {
-  label: string;
-  description: string;
-  comingSoon?: boolean;
+interface NestedCategory extends Category {
+  subs: Category[];
 }
-interface NavItem {
-  label: string;
-  slug: string;
-  featured: { img: string; headline: string; sub: string };
-  subs: SubItem[];
-}
-
-const NAV_ITEMS: NavItem[] = [
-  {
-    label: "Ties",
-    slug: "ties",
-    featured: {
-      img: "/products/burberry-stripe-1.jpg",
-      headline: "British Heritage",
-      sub: "Authenticated silk ties from the world's finest houses",
-    },
-    subs: [
-      { label: "Italian", description: "Como silk, luxury weave" },
-      { label: "French", description: "Dior & Hermès heritage" },
-      { label: "UK", description: "Burberry & BSL tradition" },
-      { label: "USA", description: "Ralph Lauren classics" },
-    ],
-  },
-  {
-    label: "Shirts",
-    slug: "shirts",
-    featured: {
-      img: "https://images.unsplash.com/photo-1604695573706-53170668f6a6?w=600&fit=crop&auto=format",
-      headline: "Dress Sharp",
-      sub: "Pre-owned formal shirts from iconic American and European labels",
-    },
-    subs: [
-      { label: "Italian", description: "Fine poplin, Venetian cut" },
-      { label: "French", description: "Parisian style, heritage fabric" },
-      { label: "UK", description: "British twill & Oxford weave" },
-      { label: "USA", description: "Ralph Lauren & Gant classics" },
-    ],
-  },
-  {
-    label: "Shoes",
-    slug: "shoes",
-    featured: {
-      img: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600&fit=crop&auto=format",
-      headline: "Coming Soon",
-      sub: "Curated footwear from premium international brands — launching shortly",
-    },
-    subs: [
-      { label: "Formals", description: "Oxford, Derby & Loafer" },
-      { label: "Sneakers", description: "Nike, Adidas & New Balance" },
-      { label: "Joggers", description: "Puma & New Balance" },
-    ],
-  },
-  {
-    label: "Watches",
-    slug: "watches",
-    featured: {
-      img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&fit=crop&auto=format",
-      headline: "Coming Soon",
-      sub: "Curated vintage and modern timepieces — launching shortly",
-    },
-    subs: [
-      { label: "Wrist Watches", description: "Dress & casual timepieces" },
-      { label: "Pocket Watches", description: "Vintage & antique styles" },
-      { label: "Smart Watches", description: "Connected & fitness" },
-      { label: "Men's", description: "Heritage men's pieces" },
-      { label: "Women's", description: "Elegant women's styles" },
-      { label: "Casual", description: "Everyday wear" },
-      { label: "Formal", description: "Dress & luxury" },
-      { label: "Sports", description: "Diver & chronograph" },
-    ],
-  },
-  {
-    label: "Belts",
-    slug: "belts",
-    featured: {
-      img: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&fit=crop&auto=format",
-      headline: "Coming Soon",
-      sub: "Premium leather belts from world-class brands — launching shortly",
-    },
-    subs: [
-      { label: "Leather Belts", description: "Full-grain & genuine leather" },
-      { label: "Formal Belts", description: "Pin & plate buckle styles" },
-      { label: "Casual Belts", description: "Everyday casual wear" },
-      { label: "Reversible", description: "Two-tone versatile belts" },
-      { label: "Black", description: "Classic black leather" },
-      { label: "Brown", description: "Rich brown tones" },
-      { label: "Tan", description: "Light tan & cognac" },
-    ],
-  },
-  {
-    label: "Trousers",
-    slug: "trousers",
-    featured: {
-      img: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600&fit=crop&auto=format",
-      headline: "Coming Soon",
-      sub: "Premium formal and smart-casual trousers — launching shortly",
-    },
-    subs: [
-      { label: "Formal Trousers", description: "Office & dress trousers" },
-      { label: "Chinos", description: "Smart-casual cotton chinos" },
-      { label: "Dress Pants", description: "Premium dress trousers" },
-      { label: "Slim Fit", description: "Modern slim silhouette" },
-      { label: "Straight Fit", description: "Classic straight cut" },
-      { label: "Tapered Fit", description: "Tapered & fitted style" },
-    ],
-  },
-];
 
 /* ─────────────────────────────────────────────────────────
    Simple dropdown panel
 ───────────────────────────────────────────────────────── */
-function SimpleDropdown({ item }: { item: NavItem }) {
+function SimpleDropdown({ item }: { item: NestedCategory }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.14, ease: "easeOut" }}
-      className="absolute top-full left-0 z-50 min-w-[140px] bg-white border border-gray-100 shadow-[0_8px_24px_rgba(0,0,0,0.09)]"
+      className="absolute top-full left-0 z-50 min-w-[160px] bg-white border border-gray-100 shadow-[0_8px_24px_rgba(0,0,0,0.09)]"
     >
       <Link href={`/products?category=${item.slug}`}>
         <div className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500 hover:text-black hover:bg-gray-50 transition-colors border-b border-gray-100">
-          All {item.label}
+          All {item.name}
         </div>
       </Link>
       {item.subs.map((sub) => (
         <Link
-          key={sub.label}
-          href={
-            sub.comingSoon
-              ? `/products?category=${item.slug}`
-              : `/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.label)}`
-          }
+          key={sub.id}
+          href={`/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.name)}`}
         >
           <div className="group flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors">
-            <span className={`text-[13px] font-medium transition-colors ${sub.comingSoon ? "text-gray-300" : "text-gray-800 group-hover:text-black"}`}>
-              {sub.label}
+            <span className="text-[13px] font-medium text-gray-800 group-hover:text-black transition-colors">
+              {sub.name}
             </span>
-            {sub.comingSoon && (
-              <span className="text-[8px] uppercase tracking-wide font-bold text-gray-300 ml-2">Soon</span>
-            )}
           </div>
         </Link>
       ))}
@@ -172,7 +54,7 @@ function SimpleDropdown({ item }: { item: NavItem }) {
 /* ─────────────────────────────────────────────────────────
    Nav item trigger
 ───────────────────────────────────────────────────────── */
-function NavItemWithMenu({ item }: { item: NavItem }) {
+function NavItemWithMenu({ item }: { item: NestedCategory }) {
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [location] = useLocation();
@@ -197,9 +79,10 @@ function NavItemWithMenu({ item }: { item: NavItem }) {
             isActive ? "text-black" : "text-gray-500 hover:text-black"
           }`}
         >
-          {item.label}
-          <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${open ? "rotate-180 text-black" : "text-gray-400"}`} />
-          {/* Active underline */}
+          {item.name}
+          {item.subs.length > 0 && (
+            <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${open ? "rotate-180 text-black" : "text-gray-400"}`} />
+          )}
           <span
             className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 transition-all duration-200 origin-left ${
               isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
@@ -209,7 +92,7 @@ function NavItemWithMenu({ item }: { item: NavItem }) {
       </Link>
 
       <AnimatePresence>
-        {open && <SimpleDropdown item={item} />}
+        {open && item.subs.length > 0 && <SimpleDropdown item={item} />}
       </AnimatePresence>
     </div>
   );
@@ -225,9 +108,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { isUserLoggedIn, user, userLogout } = useUserAuth();
   const [location] = useLocation();
 
+  // 🔄 Fetch Live Categories from Database
+  const { data: allCategories } = useListCategories({
+    query: { queryKey: getListCategoriesQueryKey() }
+  });
+
+  // Group Categories & Subcategories dynamically
+  const navItems = useMemo<NestedCategory[]>(() => {
+    if (!allCategories) return [];
+    const activeCats = allCategories.filter((c) => c.isActive);
+    const parents = activeCats.filter((c) => !c.parentId);
+
+    return parents.map((parent) => ({
+      ...parent,
+      subs: activeCats.filter((sub) => sub.parentId === parent.id),
+    }));
+  }, [allCategories]);
+
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900 font-sans">
-
       {/* Announcement */}
       <div className="bg-[#0a0a0a] text-white text-center py-2 px-4 text-[10px] tracking-[0.2em] uppercase font-medium">
         Free Cash on Delivery — Karachi, Lahore &amp; Islamabad
@@ -236,13 +135,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Header */}
       <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-100">
         <div className="max-w-[1400px] mx-auto px-4 lg:px-10 h-14 flex items-center gap-8">
-
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
             <img src={logoImg} alt="GeekThrifts" className="h-10 w-auto object-contain" />
           </Link>
 
-          {/* Desktop Nav — visible at 900px+ */}
+          {/* Desktop Nav */}
           <nav className="hidden sm:flex items-center gap-6 flex-1 h-14">
             <Link href="/">
               <button
@@ -254,8 +152,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <span className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gray-900 transition-all duration-200 origin-left ${location === "/" ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"}`} />
               </button>
             </Link>
-            {NAV_ITEMS.map((item) => (
-              <NavItemWithMenu key={item.slug} item={item} />
+            {navItems.map((item) => (
+              <NavItemWithMenu key={item.id} item={item} />
             ))}
           </nav>
 
@@ -264,7 +162,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {isUserLoggedIn && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-1.5 px-3 py-2 text-gray-600 hover:text-black transition-colors" aria-label="Account">
+                  <button className="flex items-center gap-1.5 px-3 py-2 text-gray-600 hover:text-black transition-colors">
                     <User className="w-4 h-4" />
                     <span className="hidden sm:inline text-[12px] font-medium uppercase tracking-[0.06em]">{user.name.split(" ")[0]}</span>
                   </button>
@@ -289,7 +187,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
             )}
 
-            <Link href="/cart" className="relative px-3 py-2 text-gray-600 hover:text-black transition-colors" aria-label="Cart">
+            <Link href="/cart" className="relative px-3 py-2 text-gray-600 hover:text-black transition-colors">
               <ShoppingBag className="w-[18px] h-[18px]" />
               {totalItems > 0 && (
                 <span className="absolute top-1 right-0.5 w-4 h-4 bg-[#0a0a0a] text-white text-[9px] flex items-center justify-center rounded-full font-bold">
@@ -298,18 +196,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
               )}
             </Link>
 
-            {/* Mobile hamburger — hidden at 900px+ */}
             <button
               className="sm:hidden px-2 py-2 text-gray-700 ml-1"
               onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Menu"
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile accordion menu */}
+        {/* Mobile menu */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
@@ -324,20 +220,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   Home
                 </Link>
 
-                {NAV_ITEMS.map((item) => (
-                  <div key={item.slug}>
+                {navItems.map((item) => (
+                  <div key={item.id}>
                     <button
                       onClick={() => setExpandedMobile(expandedMobile === item.slug ? null : item.slug)}
                       className="w-full flex items-center justify-between py-3 text-[13px] font-semibold uppercase tracking-[0.1em] text-gray-900 border-b border-gray-100"
                     >
-                      {item.label}
-                      <ChevronDown
-                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedMobile === item.slug ? "rotate-180" : ""}`}
-                      />
+                      {item.name}
+                      {item.subs.length > 0 && (
+                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${expandedMobile === item.slug ? "rotate-180" : ""}`} />
+                      )}
                     </button>
 
                     <AnimatePresence>
-                      {expandedMobile === item.slug && (
+                      {expandedMobile === item.slug && item.subs.length > 0 && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
@@ -351,21 +247,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
                               onClick={() => setMobileOpen(false)}
                               className="py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] text-gray-600 hover:text-black border-b border-gray-100 transition-colors"
                             >
-                              All {item.label}
+                              All {item.name}
                             </Link>
                             {item.subs.map((sub) => (
                               <Link
-                                key={sub.label}
-                                href={sub.comingSoon ? `/products?category=${item.slug}` : `/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.label)}`}
+                                key={sub.id}
+                                href={`/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.name)}`}
                                 onClick={() => setMobileOpen(false)}
                               >
                                 <div className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-b-0">
-                                  <span className={`text-[13px] font-medium ${sub.comingSoon ? "text-gray-300" : "text-gray-800"}`}>
-                                    {sub.label}
+                                  <span className="text-[13px] font-medium text-gray-800">
+                                    {sub.name}
                                   </span>
-                                  {sub.comingSoon && (
-                                    <span className="text-[8px] uppercase tracking-wide font-bold text-gray-300">Soon</span>
-                                  )}
                                 </div>
                               </Link>
                             ))}
@@ -375,162 +268,33 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </AnimatePresence>
                   </div>
                 ))}
-
-                <div className="pt-4 pb-1 flex flex-col gap-3 border-t border-gray-100 mt-2">
-                  {isUserLoggedIn && user ? (
-                    <button className="text-left text-[13px] font-semibold uppercase tracking-[0.1em] text-gray-700" onClick={() => { userLogout(); setMobileOpen(false); }}>
-                      Sign Out
-                    </button>
-                  ) : (
-                    <>
-                      <Link href="/login" onClick={() => setMobileOpen(false)} className="text-[13px] font-semibold uppercase tracking-[0.1em] text-gray-700">Sign In</Link>
-                      <Link href="/signup" onClick={() => setMobileOpen(false)} className="text-[13px] font-semibold uppercase tracking-[0.1em] text-gray-700">Create Account</Link>
-                    </>
-                  )}
-                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </header>
 
-      <main className="flex-1 flex flex-col">
-        {children}
-      </main>
+      <main className="flex-1 flex flex-col">{children}</main>
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <footer className="bg-white border-t border-gray-100 mt-8">
-
-        {/* Newsletter */}
-        <div className="border-b border-gray-100 py-10 px-4 text-center">
-          <h4 className="text-[11px] font-bold uppercase tracking-[0.3em] text-gray-900 mb-4">Join Our Newsletter</h4>
-          <form className="flex justify-center" onSubmit={e => e.preventDefault()}>
-            <input
-              type="email"
-              placeholder="Enter your email address"
-              className="w-full max-w-sm border-b border-gray-300 focus:border-gray-900 outline-none py-2 px-1 text-[12px] tracking-wider text-gray-600 placeholder-gray-400 bg-transparent transition-colors"
-            />
-          </form>
-        </div>
-
-        {/* Columns */}
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-6">
-          <div>
-            <Link href="/products?category=ties">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">Ties</p>
-            </Link>
-            <ul className="space-y-2">
-              {["Italian", "French", "UK", "USA"].map(sub => (
-                <li key={sub}>
-                  <Link href={`/products?category=ties&subcategory=${encodeURIComponent(sub)}`}>
-                    <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <Link href="/products?category=shirts">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">Shirts</p>
-            </Link>
-            <ul className="space-y-2">
-              {["Italian", "French", "UK", "USA"].map(sub => (
-                <li key={sub}>
-                  <Link href={`/products?category=shirts&subcategory=${encodeURIComponent(sub)}`}>
-                    <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <Link href="/products?category=shoes">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">Shoes</p>
-            </Link>
-            <ul className="space-y-2">
-              {["Formals", "Sneakers", "Joggers"].map(sub => (
-                <li key={sub}>
-                  <Link href={`/products?category=shoes&subcategory=${encodeURIComponent(sub)}`}>
-                    <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <Link href="/products?category=watches">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">Watches</p>
-            </Link>
-            <ul className="space-y-2">
-              {["Wrist Watches", "Pocket Watches", "Smart Watches", "Men's", "Women's"].map(sub => (
-                <li key={sub}>
-                  <Link href={`/products?category=watches&subcategory=${encodeURIComponent(sub)}`}>
-                    <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <Link href="/products?category=belts">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">Belts</p>
-            </Link>
-            <ul className="space-y-2">
-              {["Leather Belts", "Formal Belts", "Casual Belts", "Black", "Brown", "Tan"].map(sub => (
-                <li key={sub}>
-                  <Link href={`/products?category=belts&subcategory=${encodeURIComponent(sub)}`}>
-                    <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <Link href="/products?category=trousers">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">Trousers</p>
-            </Link>
-            <ul className="space-y-2">
-              {["Formal Trousers", "Chinos", "Dress Pants", "Slim Fit", "Straight Fit"].map(sub => (
-                <li key={sub}>
-                  <Link href={`/products?category=trousers&subcategory=${encodeURIComponent(sub)}`}>
-                    <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3">Help</p>
-            <ul className="space-y-2">
-              <li><Link href="/order-status" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Order Status</Link></li>
-              <li><Link href="/shipping" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Shipping &amp; Delivery</Link></li>
-              <li><Link href="/return-policy" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Return Policy</Link></li>
-              <li><Link href="/faqs" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">FAQs</Link></li>
-              <li><Link href="/privacy-policy" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Privacy Policy</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3">Customer Care</p>
-            <ul className="space-y-2.5">
-              <li><span className="text-[12px] text-gray-500">COD Only — No Online Payment</span></li>
-              <li><a href="mailto:geekthriftsstore@gmail.com" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Email Us</a></li>
-              <li><a href="https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==" target="_blank" rel="noopener noreferrer" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Instagram</a></li>
-              <li><a href="https://www.facebook.com/people/Geek-Thrifts-Store/61578288207386/" target="_blank" rel="noopener noreferrer" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Facebook</a></li>
-              {!isUserLoggedIn && (
-                <li><Link href="/signup" className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors">Create Account</Link></li>
-              )}
-              {isUserLoggedIn && (
-                <li><button className="text-[12px] text-gray-500 uppercase tracking-[0.06em] hover:text-black transition-colors" onClick={userLogout}>Sign Out</button></li>
-              )}
-            </ul>
-          </div>
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-6">
+          {navItems.map((cat) => (
+            <div key={cat.id}>
+              <Link href={`/products?category=${cat.slug}`}>
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3 hover:text-gray-500 transition-colors cursor-pointer">{cat.name}</p>
+              </Link>
+              <ul className="space-y-2">
+                {cat.subs.map((sub) => (
+                  <li key={sub.id}>
+                    <Link href={`/products?category=${cat.slug}&subcategory=${encodeURIComponent(sub.name)}`}>
+                      <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub.name}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
         <div className="border-t border-gray-100 py-4 px-4">
@@ -539,7 +303,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </p>
         </div>
       </footer>
-
     </div>
   );
 }
