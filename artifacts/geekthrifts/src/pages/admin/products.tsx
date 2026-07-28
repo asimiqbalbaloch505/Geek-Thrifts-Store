@@ -106,21 +106,22 @@ export default function AdminProducts() {
   const selectedCategory = categories?.find(c => c.id === Number(watchedCategoryId));
   const categorySlug = selectedCategory?.slug ?? "";
   const isNoSize = NO_SIZE_SLUGS.has(categorySlug);
-  const getAvailableSizes = (category: typeof selectedCategory) => {
-  if (!category) return [];
-  const slug = category.slug;
-
-  if (SIZE_OPTIONS[slug]) return SIZE_OPTIONS[slug];
   
-  // Fallback to parent sizing for subcategories
-  if (slug.includes("shirt")) return SIZE_OPTIONS["shirts"];
-  if (slug.includes("trouser") || slug.includes("pant")) return SIZE_OPTIONS["trousers"];
-  if (slug.includes("shoe")) return SIZE_OPTIONS["shoes"];
+  const getAvailableSizes = (category: typeof selectedCategory) => {
+    if (!category) return [];
+    const slug = category.slug;
 
-  return [];
-};
+    if (SIZE_OPTIONS[slug]) return SIZE_OPTIONS[slug];
+    
+    // Fallback to parent sizing for subcategories
+    if (slug.includes("shirt")) return SIZE_OPTIONS["shirts"];
+    if (slug.includes("trouser") || slug.includes("pant")) return SIZE_OPTIONS["trousers"];
+    if (slug.includes("shoe")) return SIZE_OPTIONS["shoes"];
 
-const availableSizes = getAvailableSizes(selectedCategory);
+    return [];
+  };
+
+  const availableSizes = getAvailableSizes(selectedCategory);
   const hasSizes = !isNoSize && availableSizes.length > 0;
   const isTie = categorySlug === "ties";
 
@@ -188,7 +189,6 @@ const availableSizes = getAvailableSizes(selectedCategory);
   };
 
   const onSubmit = (values: ProductValues) => {
-    // For no-size/tie categories, derive stock from the field; for sized, it's sum of qty
     const finalStock = hasSizes
       ? values.sizeInventory.reduce((sum, s) => sum + s.qty, 0)
       : values.stock;
@@ -218,8 +218,8 @@ const availableSizes = getAvailableSizes(selectedCategory);
           <h1 className="font-serif text-3xl font-bold uppercase tracking-tighter mb-2">Products</h1>
           <p className="text-muted-foreground text-sm">Manage inventory and catalog.</p>
         </div>
-        <Button onClick={openAddDialog} className="rounded-none uppercase font-bold tracking-widest text-xs h-10 px-6 flex gap-2">
-          <Plus className="w-4 h-4" /> Add Product
+        <Button className="rounded-none uppercase font-bold tracking-widest text-xs h-10 px-6 flex gap-2" onClick={openAddDialog}>
+          <Plus className="w-4 h-4"/> Add Product
         </Button>
       </div>
 
@@ -249,11 +249,11 @@ const availableSizes = getAvailableSizes(selectedCategory);
                     <div className="absolute top-2 right-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest px-2 py-1">Featured</div>
                   )}
                   <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
-                    <Button variant="outline" size="icon" className="rounded-none h-10 w-10 bg-background border-border" onClick={() => openEditDialog(product)}>
-                      <Edit className="w-4 h-4" />
+                    <Button className="rounded-none h-10 w-10 bg-background border-border" onClick={() => openEditDialog(product)} size="icon" variant="outline">
+                      <Edit className="w-4 h-4"/>
                     </Button>
-                    <Button variant="destructive" size="icon" className="rounded-none h-10 w-10" onClick={() => handleDelete(product.id)}>
-                      <Trash2 className="w-4 h-4" />
+                    <Button className="rounded-none h-10 w-10" onClick={() => handleDelete(product.id)} size="icon" variant="destructive">
+                      <Trash2 className="w-4 h-4"/>
                     </Button>
                   </div>
                 </div>
@@ -286,52 +286,66 @@ const availableSizes = getAvailableSizes(selectedCategory);
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left column */}
                 <div className="space-y-5">
-                  <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Name</FormLabel>
-                      <FormControl><Input className="rounded-none border-border" {...field} /></FormControl>
-                      <FormMessage className="text-[10px]" />
-                    </FormItem>
-                  )} />
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Name</FormLabel>
+                        <FormControl><Input className="rounded-none border-border" {...field}/></FormControl>
+                        <FormMessage className="text-[10px]"/>
+                      </FormItem>
+                    )}
+                  />
 
                   <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="price" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Price (PKR)</FormLabel>
-                        <FormControl><Input type="number" className="rounded-none border-border" {...field} /></FormControl>
-                        <FormMessage className="text-[10px]" />
-                      </FormItem>
-                    )} />
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Price (PKR)</FormLabel>
+                          <FormControl><Input className="rounded-none border-border" type="number" {...field}/></FormControl>
+                          <FormMessage className="text-[10px]"/>
+                        </FormItem>
+                      )}
+                    />
 
-                    <FormField control={form.control} name="categoryId" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Category</FormLabel>
-                        <Select value={field.value.toString()} onValueChange={v => field.onChange(Number(v))}>
-                          <FormControl>
-                            <SelectTrigger className="rounded-none border-border">
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                          </FormControl>
-                         <<SelectContent className="rounded-none">
-  {categories?.map((cat) => {
-    // If it's a subcategory, find its parent name
-    const parentCat = cat.parentId ? categories.find(p => p.id === cat.parentId) : null;
-    const label = parentCat ? `${parentCat.name} / ${cat.name}` : cat.name;
+                    <FormField
+                      control={form.control}
+                      name="categoryId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Category</FormLabel>
+                          <Select
+                            value={field.value ? field.value.toString() : ""}
+                            onValueChange={(v) => field.onChange(Number(v))}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="rounded-none border-border">
+                                <SelectValue placeholder="Select"/>
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="rounded-none">
+                              {categories?.map((cat) => {
+                                const parentCat = cat.parentId ? categories.find(p => p.id === cat.parentId) : null;
+                                const label = parentCat ? `${parentCat.name} / ${cat.name}` : cat.name;
 
-    return (
-      <SelectItem key={cat.id} value={String(cat.id)}>
-        {parentCat ? `— ${label}` : label}
-      </SelectItem>
-    );
-  })}
-</SelectContent>
-                        </Select>
-                        <FormMessage className="text-[10px]" />
-                      </FormItem>
-                    )} />
+                                return (
+                                  <SelectItem key={cat.id} value={String(cat.id)}>
+                                    {parentCat ? `— ${label}` : label}
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-[10px]"/>
+                        </FormItem>
+                      )}
+                    />
                   </div>
 
-                  {/* Sizes with per-size qty — for shirts/trousers/shoes */}
+                  {/* Sizes with per-size qty */}
                   {hasSizes && (
                     <div>
                       <p className="text-xs uppercase tracking-widest font-bold mb-2">Sizes &amp; Stock</p>
@@ -344,9 +358,9 @@ const availableSizes = getAvailableSizes(selectedCategory);
                           return (
                             <div key={size} className="flex items-center gap-3 border border-border p-2.5">
                               <Checkbox
-                                className="rounded-none"
                                 checked={isChecked}
-                                onCheckedChange={checked => toggleSize(size, !!checked)}
+                                className="rounded-none"
+                                onCheckedChange={(checked) => toggleSize(size, !!checked)}
                               />
                               <span className="text-xs font-bold uppercase tracking-wider w-10 flex-shrink-0">
                                 {categorySlug === "shoes" ? `UK ${size}` : size}
@@ -358,7 +372,7 @@ const availableSizes = getAvailableSizes(selectedCategory);
                                       type="number"
                                       min={0}
                                       value={item?.qty ?? 0}
-                                      onChange={e => updateQty(size, Number(e.target.value))}
+                                      onChange={(e) => updateQty(size, Number(e.target.value))}
                                       className="h-7 w-20 rounded-none border-border text-xs"
                                       placeholder="Qty"
                                     />
@@ -385,87 +399,115 @@ const availableSizes = getAvailableSizes(selectedCategory);
 
                   {/* Ties: just quantity (no sizes) */}
                   {isTie && (
-                    <FormField control={form.control} name="stock" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Stock Quantity</FormLabel>
-                        <FormControl><Input type="number" min={0} className="rounded-none border-border" {...field} /></FormControl>
-                        <p className="text-[10px] text-muted-foreground">Ties have no size selection. Enter total available quantity.</p>
-                        <FormMessage className="text-[10px]" />
-                      </FormItem>
-                    )} />
+                    <FormField
+                      control={form.control}
+                      name="stock"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Stock Quantity</FormLabel>
+                          <FormControl><Input className="rounded-none border-border" min={0} type="number" {...field}/></FormControl>
+                          <p className="text-[10px] text-muted-foreground">Ties have no size selection. Enter total available quantity.</p>
+                          <FormMessage className="text-[10px]"/>
+                        </FormItem>
+                      )}
+                    />
                   )}
 
                   {/* Watches & belts: just quantity (no sizes) */}
                   {isNoSize && (
-                    <FormField control={form.control} name="stock" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Stock Quantity</FormLabel>
-                        <FormControl><Input type="number" min={0} className="rounded-none border-border" {...field} /></FormControl>
-                        <p className="text-[10px] text-muted-foreground">No size selection for this category.</p>
-                        <FormMessage className="text-[10px]" />
-                      </FormItem>
-                    )} />
+                    <FormField
+                      control={form.control}
+                      name="stock"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Stock Quantity</FormLabel>
+                          <FormControl><Input className="rounded-none border-border" min={0} type="number" {...field}/></FormControl>
+                          <p className="text-[10px] text-muted-foreground">No size selection for this category.</p>
+                          <FormMessage className="text-[10px]"/>
+                        </FormItem>
+                      )}
+                    />
                   )}
                 </div>
 
                 {/* Right column — image URL */}
                 <div className="space-y-4">
-                  <FormField control={form.control} name="imageUrl" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Image URL</FormLabel>
-                      <FormControl>
-                        <Input
-                          className="rounded-none border-border text-xs"
-                          placeholder="https://i.imgur.com/example.jpg"
-                          {...field}
-                          onChange={e => {
-                            field.onChange(e);
-                            setImagePreview(e.target.value);
-                          }}
-                        />
-                      </FormControl>
-                      <p className="text-[10px] text-muted-foreground">
-                        Paste a direct image link from Imgur, Cloudinary, or any image host.
-                      </p>
-                      {(imagePreview || field.value) && (
-                        <div className="aspect-[4/3] bg-muted border border-border overflow-hidden mt-2">
-                          <img
-                            src={getImageUrl(imagePreview || field.value || "")}
-                            alt="Preview"
-                            className="w-full h-full object-cover"
-                            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Image URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            className="rounded-none border-border text-xs"
+                            placeholder="https://i.imgur.com/example.jpg"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              setImagePreview(e.target.value);
+                            }}
                           />
-                        </div>
-                      )}
-                      <FormMessage className="text-[10px]" />
-                    </FormItem>
-                  )} />
+                        </FormControl>
+                        <p className="text-[10px] text-muted-foreground">
+                          Paste a direct image link from Imgur, Cloudinary, or any image host.
+                        </p>
+                        {(imagePreview || field.value) && (
+                          <div className="aspect-[4/3] bg-muted border border-border overflow-hidden mt-2">
+                            <img
+                              src={getImageUrl(imagePreview || field.value || "")}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                            />
+                          </div>
+                        )}
+                        <FormMessage className="text-[10px]"/>
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </div>
 
-              <FormField control={form.control} name="description" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs uppercase tracking-widest font-bold">Description</FormLabel>
-                  <FormControl>
-                    <Textarea className="resize-none min-h-[80px] rounded-none border-border" {...field} />
-                  </FormControl>
-                  <FormMessage className="text-[10px]" />
-                </FormItem>
-              )} />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Description</FormLabel>
+                    <FormControl>
+                      <Textarea className="resize-none min-h-[80px] rounded-none border-border" {...field}/>
+                    </FormControl>
+                    <FormMessage className="text-[10px]"/>
+                  </FormItem>
+                )}
+              />
 
               <div className="flex gap-8 border-t border-border pt-6">
-                <FormField control={form.control} name="isActive" render={({ field }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Active (Visible)</FormLabel>
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="isFeatured" render={({ field }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Featured on Home</FormLabel>
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Active (Visible)</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isFeatured"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                      <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Featured on Home</FormLabel>
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="sticky bottom-0 bg-background pt-4 pb-2 border-t border-border flex justify-end gap-4">
