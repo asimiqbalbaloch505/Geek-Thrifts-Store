@@ -40,8 +40,15 @@ router.post("/", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  
   try {
-    const [category] = await db.insert(categoriesTable).values(parsed.data).returning();
+    // Manually ensure parentId is explicitly passed if present in req.body
+    const insertData = {
+      ...parsed.data,
+      parentId: req.body.parentId !== undefined ? (req.body.parentId ? Number(req.body.parentId) : null) : null,
+    };
+
+    const [category] = await db.insert(categoriesTable).values(insertData).returning();
     res.status(201).json({ ...category, productCount: 0, createdAt: category.createdAt.toISOString() });
   } catch (err) {
     req.log.error({ err }, "Failed to create category");
@@ -60,12 +67,21 @@ router.put("/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
+  
   try {
+    // Explicitly grab parentId from req.body so Zod schema stripping doesn't lose it
+    const updatePayload: Record<string, any> = { ...parsed.data };
+    
+    if ("parentId" in req.body) {
+      updatePayload.parentId = req.body.parentId ? Number(req.body.parentId) : null;
+    }
+
     const [updated] = await db
       .update(categoriesTable)
-      .set(parsed.data)
+      .set(updatePayload)
       .where(eq(categoriesTable.id, paramsParsed.data.id))
       .returning();
+
     if (!updated) {
       res.status(404).json({ error: "Category not found" });
       return;
