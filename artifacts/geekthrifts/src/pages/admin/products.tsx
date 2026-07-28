@@ -106,7 +106,21 @@ export default function AdminProducts() {
   const selectedCategory = categories?.find(c => c.id === Number(watchedCategoryId));
   const categorySlug = selectedCategory?.slug ?? "";
   const isNoSize = NO_SIZE_SLUGS.has(categorySlug);
-  const availableSizes = SIZE_OPTIONS[categorySlug] ?? [];
+  const getAvailableSizes = (category: typeof selectedCategory) => {
+  if (!category) return [];
+  const slug = category.slug;
+
+  if (SIZE_OPTIONS[slug]) return SIZE_OPTIONS[slug];
+  
+  // Fallback to parent sizing for subcategories
+  if (slug.includes("shirt")) return SIZE_OPTIONS["shirts"];
+  if (slug.includes("trouser") || slug.includes("pant")) return SIZE_OPTIONS["trousers"];
+  if (slug.includes("shoe")) return SIZE_OPTIONS["shoes"];
+
+  return [];
+};
+
+const availableSizes = getAvailableSizes(selectedCategory);
   const hasSizes = !isNoSize && availableSizes.length > 0;
   const isTie = categorySlug === "ties";
 
@@ -298,13 +312,20 @@ export default function AdminProducts() {
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent className="rounded-none border-border">
-                            {categories?.map(c => (
-                              <SelectItem key={c.id} value={c.id.toString()} className="rounded-none uppercase text-xs tracking-wider font-bold">
-                                {c.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
+                         <SelectContent className="rounded-none border-border">
+  {categories?.map(c => {
+    const isSubcategory = c.parentId !== null;
+    return (
+      <SelectItem 
+        key={c.id} 
+        value={c.id.toString()} 
+        className="rounded-none uppercase text-xs tracking-wider font-bold"
+      >
+        {isSubcategory ? `— ${c.name}` : c.name}
+      </SelectItem>
+    );
+  })}
+</SelectContent>
                         </Select>
                         <FormMessage className="text-[10px]" />
                       </FormItem>

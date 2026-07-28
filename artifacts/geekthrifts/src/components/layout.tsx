@@ -28,19 +28,19 @@ function SimpleDropdown({ item }: { item: NestedCategory }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.14, ease: "easeOut" }}
-      className="absolute top-full left-0 z-50 min-w-[160px] bg-white border border-gray-100 shadow-[0_8px_24px_rgba(0,0,0,0.09)]"
+      className="absolute top-full left-0 z-50 min-w-[180px] bg-white border border-gray-100 shadow-[0_8px_24px_rgba(0,0,0,0.09)]"
     >
       <Link href={`/products?category=${item.slug}`}>
-        <div className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500 hover:text-black hover:bg-gray-50 transition-colors border-b border-gray-100">
+        <div className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500 hover:text-black hover:bg-gray-50 transition-colors border-b border-gray-100 cursor-pointer">
           All {item.name}
         </div>
       </Link>
       {item.subs.map((sub) => (
         <Link
           key={sub.id}
-          href={`/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.name)}`}
+          href={`/products?category=${sub.slug}`}
         >
-          <div className="group flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors">
+          <div className="group flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer">
             <span className="text-[13px] font-medium text-gray-800 group-hover:text-black transition-colors">
               {sub.name}
             </span>
@@ -137,7 +137,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="max-w-[1400px] mx-auto px-4 lg:px-10 h-14 flex items-center gap-8">
           {/* Logo */}
           <Link href="/" className="flex-shrink-0">
-            <img src={logoImg} alt="GeekThrifts" className="h-10 w-auto object-contain" />
+            <img src={logoImg} alt="GeekThrifts" className="h-10 w-auto object-contain cursor-pointer" />
           </Link>
 
           {/* Desktop Nav */}
@@ -245,17 +245,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
                             <Link
                               href={`/products?category=${item.slug}`}
                               onClick={() => setMobileOpen(false)}
-                              className="py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] text-gray-600 hover:text-black border-b border-gray-100 transition-colors"
+                              className="py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] text-gray-600 hover:text-black border-b border-gray-100 transition-colors cursor-pointer"
                             >
                               All {item.name}
                             </Link>
                             {item.subs.map((sub) => (
                               <Link
                                 key={sub.id}
-                                href={`/products?category=${item.slug}&subcategory=${encodeURIComponent(sub.name)}`}
+                                href={`/products?category=${sub.slug}`}
                                 onClick={() => setMobileOpen(false)}
                               >
-                                <div className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-b-0">
+                                <div className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-b-0 cursor-pointer">
                                   <span className="text-[13px] font-medium text-gray-800">
                                     {sub.name}
                                   </span>
@@ -287,7 +287,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <ul className="space-y-2">
                 {cat.subs.map((sub) => (
                   <li key={sub.id}>
-                    <Link href={`/products?category=${cat.slug}&subcategory=${encodeURIComponent(sub.name)}`}>
+                    <Link href={`/products?category=${sub.slug}`}>
                       <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{sub.name}</span>
                     </Link>
                   </li>
