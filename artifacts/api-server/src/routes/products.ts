@@ -7,18 +7,22 @@ import {
   UpdateProductParams,
 } from "@workspace/api-zod";
 
-// ⚠️ THIS WAS MISSING:
 const router = Router();
 
-// Helper function mapProduct (ensure it exists in your file)
 function mapProduct(product: any, categoryName: string) {
   return {
     ...product,
-    price: Number(product.price),
+    price: Number(product.price ?? 0),
     categoryName,
-    createdAt: product.createdAt.toISOString(),
+    createdAt:
+      product.createdAt instanceof Date
+        ? product.createdAt.toISOString()
+        : product.createdAt
+        ? new Date(product.createdAt).toISOString()
+        : new Date().toISOString(),
   };
 }
+
 router.get("/", async (req, res): Promise<void> => {
   try {
     const productsList = await db
@@ -34,17 +38,15 @@ router.get("/", async (req, res): Promise<void> => {
     );
 
     res.json(formattedProducts);
-  } catch (error) {
+  } catch (error: any) {
     req.log?.error?.({ error }, "Error fetching products");
-    res.status(500).json({ error: "Failed to fetch products" });
+    
+    res.status(500).json({ 
+      error: "Failed to fetch products",
+      message: error?.message || String(error),
+      code: error?.code
+    });
   }
-});
-router.post("/", async (req, res): Promise<void> => {
-  // ... rest of your route code ...
-});
-
-router.put("/:id", async (req, res): Promise<void> => {
-  // ... rest of your route code ...
 });
 
 export default router;
