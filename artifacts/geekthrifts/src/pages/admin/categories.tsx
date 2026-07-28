@@ -111,10 +111,18 @@ export default function AdminCategories() {
   };
 
   const onSubmit = (values: CategoryValues) => {
+    // Clean up values: convert null/undefined properly
+    const payload = {
+      ...values,
+      parentId: values.parentId ? Number(values.parentId) : null,
+      description: values.description || undefined,
+      imageUrl: values.imageUrl || undefined,
+    };
+
     if (editingCategory) {
       updateCategory.mutate({
         id: editingCategory.id,
-        data: values
+        data: payload
       }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
@@ -123,7 +131,7 @@ export default function AdminCategories() {
       });
     } else {
       createCategory.mutate({
-        data: values
+        data: payload
       }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
