@@ -312,16 +312,15 @@ const availableSizes = getAvailableSizes(selectedCategory);
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
                           </FormControl>
-                         <SelectContent className="rounded-none border-border">
-  {categories?.map(c => {
-    const isSubcategory = c.parentId !== null;
+                         <<SelectContent className="rounded-none">
+  {categories?.map((cat) => {
+    // If it's a subcategory, find its parent name
+    const parentCat = cat.parentId ? categories.find(p => p.id === cat.parentId) : null;
+    const label = parentCat ? `${parentCat.name} / ${cat.name}` : cat.name;
+
     return (
-      <SelectItem 
-        key={c.id} 
-        value={c.id.toString()} 
-        className="rounded-none uppercase text-xs tracking-wider font-bold"
-      >
-        {isSubcategory ? `— ${c.name}` : c.name}
+      <SelectItem key={cat.id} value={String(cat.id)}>
+        {parentCat ? `— ${label}` : label}
       </SelectItem>
     );
   })}

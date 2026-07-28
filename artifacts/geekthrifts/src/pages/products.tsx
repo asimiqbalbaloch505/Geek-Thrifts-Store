@@ -16,7 +16,7 @@ export default function Products() {
     query: { queryKey: getListCategoriesQueryKey() }
   });
 
-  // Separate parent categories and subcategories
+  // Separate parent categories and subcategories with precise matching logic
   const { parentCategories, activeCategory, activeSubcategory, subcategoryOptions } = useMemo(() => {
     if (!allCategories) return { parentCategories: [], activeCategory: null, activeSubcategory: null, subcategoryOptions: [] };
 
@@ -42,16 +42,22 @@ export default function Products() {
       }
     }
 
+    // Match subcategory strictly under the active main category
     if (subcategoryParam) {
       const subMatch = allCategories.find(
         c => (c.slug.toLowerCase() === subcategoryParam.toLowerCase() ||
               c.name.toLowerCase() === subcategoryParam.toLowerCase()) &&
-             c.parentId === activeCat?.id
+             (activeCat ? c.parentId === activeCat.id : true)
       );
-      if (subMatch) activeSub = subMatch;
+      if (subMatch) {
+        activeSub = subMatch;
+        if (!activeCat && subMatch.parentId) {
+          activeCat = allCategories.find(c => c.id === subMatch.parentId) || null;
+        }
+      }
     }
 
-    // Subcategories belonging to current active main category
+    // Subcategories belonging strictly to current active main category
     const subs = activeCat ? allCategories.filter(c => c.isActive && c.parentId === activeCat.id) : [];
 
     return {
@@ -106,7 +112,7 @@ export default function Products() {
           <span className="text-[13px] text-gray-400">{products?.length ?? 0} Items</span>
         </div>
 
-        {/* Main Category Filter Pills (Parent Categories Only) */}
+        {/* Main Category Filter Pills */}
         <div className="flex flex-wrap gap-2 mb-4">
           <Link href="/products">
             <button className={`h-8 px-4 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors border ${!categoryParam ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-700 hover:text-gray-900"}`}>
@@ -125,7 +131,7 @@ export default function Products() {
           })}
         </div>
 
-        {/* Dynamic Subcategory Pills (From Database) */}
+        {/* Dynamic Subcategory Pills */}
         {activeCategory && subcategoryOptions.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-8">
             <Link href={`/products?category=${activeCategory.slug}`}>
