@@ -3,7 +3,7 @@ import { useGetProduct, getGetProductQueryKey } from "@workspace/api-client-reac
 import { useParams, Link } from "wouter";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
 import { Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
@@ -87,6 +87,47 @@ function TieSizeGuide() {
   );
 }
 
+/**
+ * Helper function to extract and convert sizes into SizeInventoryItem[]
+ */
+function resolveSizeInventory(product: any): SizeInventoryItem[] {
+  if (!product) return [];
+
+  // Check direct sizeInventory field first
+  let directInv = product.sizeInventory ?? product.size_inventory;
+  if (typeof directInv === "string") {
+    try {
+      directInv = JSON.parse(directInv);
+    } catch {
+      directInv = [];
+    }
+  }
+  if (Array.isArray(directInv) && directInv.length > 0) {
+    return directInv;
+  }
+
+  // Fall back to category/product `sizes` array (as shown in Database image)
+  let rawSizes = product.sizes ?? product.category?.sizes ?? product.categorySizes;
+  if (typeof rawSizes === "string") {
+    try {
+      rawSizes = JSON.parse(rawSizes);
+    } catch {
+      rawSizes = [];
+    }
+  }
+
+  if (Array.isArray(rawSizes) && rawSizes.length > 0) {
+    const totalStock = product.stock ?? 1;
+    // Map array of size strings like ["S", "M", "L", "XL"] to SizeInventoryItem format
+    return rawSizes.map((sz: string) => ({
+      size: String(sz),
+      qty: totalStock > 0 ? totalStock : 0,
+    }));
+  }
+
+  return [];
+}
+
 export default function ProductDetail() {
   const params = useParams();
   const productId = Number(params.id);
@@ -105,8 +146,9 @@ export default function ProductDetail() {
   const isTie = categorySlug.includes("tie");
   const isShoe = categorySlug.includes("shoe");
 
-  const sizeInventory = ((product as any)?.sizeInventory ?? []) as SizeInventoryItem[];
-  const hasSizeInventory = sizeInventory.length > 0;
+  // Derive size list dynamically from product & category
+  const sizeInventory = useMemo(() => resolveSizeInventory(product), [product]);
+  const hasSizeInventory = sizeInventory.length > 0 && !isNoSize;
 
   // Pre-select size automatically if there's only 1 available size in stock
   useEffect(() => {
@@ -116,7 +158,7 @@ export default function ProductDetail() {
         setSelectedSize(availableSizes[0].size);
       }
     }
-  }, [product, hasSizeInventory]);
+  }, [hasSizeInventory, sizeInventory]);
 
   // Total stock across all sizes or flat stock
   const totalStock = product?.stock ?? 0;
@@ -293,6 +335,7 @@ export default function ProductDetail() {
                     return (
                       <button
                         key={size}
+                        type="button"
                         onClick={() => {
                           if (isOutOfStock) {
                             toast({
@@ -342,6 +385,7 @@ export default function ProductDetail() {
               </p>
               <div className="flex items-center border border-gray-200 w-fit">
                 <button
+                  type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   disabled={quantity <= 1}
                   className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30"
@@ -352,6 +396,7 @@ export default function ProductDetail() {
                   {quantity}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
                   disabled={maxQty === 0 || quantity >= maxQty}
                   className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30"
@@ -363,6 +408,7 @@ export default function ProductDetail() {
 
             {/* Add to Cart Button */}
             <button
+              type="button"
               onClick={handleAddToCart}
               disabled={
                 isCompletelyOutOfStock ||
