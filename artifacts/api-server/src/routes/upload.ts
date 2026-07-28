@@ -6,7 +6,6 @@ import path from "path";
 import fs from "fs";
 import jwt from "jsonwebtoken";
 
-const router = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "geekthrifts-fallback-secret";
 const FRONTEND_PUBLIC = path.resolve(process.cwd(), "../geekthrifts/public");

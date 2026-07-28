@@ -13,7 +13,7 @@ import {
 } from "@workspace/api-zod";
 import { sendOrderConfirmationEmails, sendStatusUpdateEmails } from "../lib/email.js";
 
-const router = Router();
+
 
 function mapOrder(order: typeof ordersTable.$inferSelect) {
   return {
