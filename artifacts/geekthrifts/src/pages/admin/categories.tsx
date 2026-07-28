@@ -35,7 +35,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Edit, Plus, Trash2, FolderTree } from "lucide-react";
 import { format } from "date-fns";
@@ -43,8 +42,6 @@ import { format } from "date-fns";
 const categorySchema = z.object({
   name: z.string().min(2, "Name is required"),
   slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only"),
-  description: z.string().optional(),
-  imageUrl: z.string().optional(),
   parentId: z.number().nullable().optional(), 
   isActive: z.boolean(),
 });
@@ -69,8 +66,6 @@ export default function AdminCategories() {
     defaultValues: {
       name: "",
       slug: "",
-      description: "",
-      imageUrl: "",
       parentId: null,
       isActive: true,
     }
@@ -81,8 +76,6 @@ export default function AdminCategories() {
     form.reset({
       name: "",
       slug: "",
-      description: "",
-      imageUrl: "",
       parentId: null,
       isActive: true,
     });
@@ -94,8 +87,6 @@ export default function AdminCategories() {
     form.reset({
       name: category.name,
       slug: category.slug,
-      description: category.description || "",
-      imageUrl: category.imageUrl || "",
       parentId: category.parentId ?? null,
       isActive: category.isActive,
     });
@@ -111,12 +102,9 @@ export default function AdminCategories() {
   };
 
   const onSubmit = (values: CategoryValues) => {
-    // Clean up values: convert null/undefined properly
     const payload = {
       ...values,
       parentId: values.parentId ? Number(values.parentId) : null,
-      description: values.description || undefined,
-      imageUrl: values.imageUrl || undefined,
     };
 
     if (editingCategory) {
@@ -163,46 +151,34 @@ export default function AdminCategories() {
             const parentCat = categories.find(c => c.id === category.parentId);
 
             return (
-              <div key={category.id} className="border border-border bg-card flex flex-col group relative overflow-hidden">
-                <div className="aspect-[2/1] bg-muted border-b border-border relative">
-                  {category.imageUrl ? (
-                    <img src={category.imageUrl} alt={category.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[10px] uppercase text-muted-foreground font-bold tracking-widest">No Image</div>
-                  )}
-
-                  {/* Top Badges */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
-                    {parentCat && (
-                      <span className="text-[9px] uppercase tracking-widest bg-black text-white px-2 py-0.5 font-bold flex items-center gap-1">
-                        <FolderTree className="w-3 h-3" /> Sub of: {parentCat.name}
-                      </span>
+              <div key={category.id} className="border border-border bg-card flex flex-col p-6 group relative">
+                {/* Top Badges */}
+                <div className="flex justify-between items-start mb-4">
+                  <div className="font-serif font-bold text-xl uppercase tracking-wider">{category.name}</div>
+                  <div className="flex items-center gap-2">
+                    {!category.isActive && (
+                      <span className="text-[10px] uppercase tracking-widest bg-muted text-foreground px-2 py-0.5 font-bold">Draft</span>
                     )}
-                  </div>
-
-                  <div className="absolute inset-0 bg-background/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
-                    <Button variant="outline" size="icon" className="rounded-none h-10 w-10 bg-background border-border" onClick={() => openEditDialog(category)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(category)}>
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button variant="destructive" size="icon" className="rounded-none h-10 w-10" onClick={() => handleDelete(category.id)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(category.id)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
-                <div className="p-6 font-sans flex-1 flex flex-col">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="font-serif font-bold text-xl uppercase tracking-wider">{category.name}</div>
-                    {!category.isActive && (
-                      <span className="text-[10px] uppercase tracking-widest bg-muted text-foreground px-2 py-1 font-bold">Draft</span>
-                    )}
-                  </div>
-                  <div className="text-xs font-mono text-muted-foreground mb-4">/{category.slug}</div>
-                  <div className="text-sm text-muted-foreground mb-6 line-clamp-2">{category.description || "No description"}</div>
-                  
-                  <div className="mt-auto flex justify-between items-center text-[10px] uppercase tracking-widest font-bold border-t border-border pt-4">
-                    <div>{category.productCount ?? 0} Products</div>
-                    <div>Added {format(new Date(category.createdAt), "MMM yyyy")}</div>
-                  </div>
+
+                {parentCat && (
+                  <span className="text-[9px] uppercase tracking-widest bg-black text-white px-2 py-0.5 font-bold self-start mb-3 flex items-center gap-1">
+                    <FolderTree className="w-3 h-3" /> Subcategory of: {parentCat.name}
+                  </span>
+                )}
+
+                <div className="text-xs font-mono text-muted-foreground mb-6">/{category.slug}</div>
+
+                <div className="mt-auto flex justify-between items-center text-[10px] uppercase tracking-widest font-bold border-t border-border pt-4">
+                  <div>{category.productCount ?? 0} Products</div>
+                  <div>Added {format(new Date(category.createdAt), "MMM yyyy")}</div>
                 </div>
               </div>
             );
@@ -218,7 +194,7 @@ export default function AdminCategories() {
               {editingCategory ? "Edit Category" : "New Category"}
             </DialogTitle>
           </DialogHeader>
-          
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 font-sans">
               <FormField control={form.control} name="name" render={({ field }) => (
@@ -239,7 +215,7 @@ export default function AdminCategories() {
                   <FormMessage className="text-[10px]" />
                 </FormItem>
               )} />
-              
+
               <FormField control={form.control} name="slug" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs uppercase tracking-widest font-bold">Slug (URL)</FormLabel>
@@ -268,24 +244,6 @@ export default function AdminCategories() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage className="text-[10px]" />
-                </FormItem>
-              )} />
-              
-              <FormField control={form.control} name="imageUrl" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs uppercase tracking-widest font-bold">Image URL</FormLabel>
-                  <FormControl><Input className="rounded-none border-border" {...field} /></FormControl>
-                  <FormMessage className="text-[10px]" />
-                </FormItem>
-              )} />
-
-              <FormField control={form.control} name="description" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs uppercase tracking-widest font-bold">Description</FormLabel>
-                  <FormControl>
-                    <Textarea className="resize-none min-h-[100px] rounded-none border-border" {...field} />
-                  </FormControl>
                   <FormMessage className="text-[10px]" />
                 </FormItem>
               )} />
