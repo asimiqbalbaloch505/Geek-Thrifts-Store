@@ -1,214 +1,563 @@
-import { Layout } from "@/components/layout";
-import { useListProducts, getListProductsQueryKey, useListCategories, getListCategoriesQueryKey } from "@workspace/api-client-react";
-import { Link, useSearch } from "wouter";
+import { AdminLayout } from "@/components/admin-layout";
+import {
+  useListProducts,
+  useListCategories,
+  useCreateProduct,
+  useUpdateProduct,
+  useDeleteProduct,
+  getListProductsQueryKey,
+  getListCategoriesQueryKey,
+  Product,
+  Category,
+} from "@workspace/api-client-react";
 import { formatPKR, getImageUrl } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { supabase } from "@/lib/supabase";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Edit, Plus, Trash2, Upload, Link as LinkIcon, Loader2 } from "lucide-react";
 
-export default function Products() {
-  const searchString = useSearch();
-  const searchParams = new URLSearchParams(searchString);
-  const categoryParam = searchParams.get("category");
-  const subcategoryParam = searchParams.get("subcategory");
+type SizeInventoryItem = { size: string; qty: number };
 
-  // Fetch live categories from DB
-  const { data: allCategories } = useListCategories({
-    query: { queryKey: getListCategoriesQueryKey() }
+const sizeInventoryItemSchema = z.object({ size: z.string(), qty: z.coerce.number().min(0) });
+
+const productSchema = z.object({
+  name: z.string().min(2, "Name is required"),
+  description: z.string().optional(),
+  price: z.coerce.number().min(1, "Price must be greater than 0"),
+  imageUrl: z.string().min(1, "Product image is required"), // Enforce image requirement
+  categoryId: z.coerce.number().min(1, "Category is required"),
+  sizes: z.array(z.string()),
+  sizeInventory: z.array(sizeInventoryItemSchema),
+  stock: z.coerce.number().min(0),
+  isActive: z.boolean(),
+  isFeatured: z.boolean(),
+});
+
+type ProductValues = z.infer<typeof productSchema>;
+
+export default function AdminProducts() {
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  
+  // Image handling states
+  const [imageMode, setImageMode] = useState<"upload" | "url">("upload");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const { data: products, isLoading } = useListProducts(undefined, {
+    query: { queryKey: getListProductsQueryKey() },
+  });
+  const { data: categories } = useListCategories({
+    query: { queryKey: getListCategoriesQueryKey() },
   });
 
-  // Separate parent categories and subcategories with precise matching logic
-  const { parentCategories, activeCategory, activeSubcategory, subcategoryOptions } = useMemo(() => {
-    if (!allCategories) return { parentCategories: [], activeCategory: null, activeSubcategory: null, subcategoryOptions: [] };
+  const createProduct = useCreateProduct();
+  const updateProduct = useUpdateProduct();
+  const deleteProduct = useDeleteProduct();
 
-    const parents = allCategories.filter(c => c.isActive && !c.parentId);
+  const form = useForm<ProductValues>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: "", description: "", price: 0, imageUrl: "",
+      categoryId: 0, sizes: [], sizeInventory: [], stock: 0,
+      isActive: true, isFeatured: false,
+    },
+  });
 
-    let activeCat = null;
-    let activeSub = null;
+  const watchedCategoryId = useWatch({ control: form.control, name: "categoryId" });
+  const watchedSizeInventory = useWatch({ control: form.control, name: "sizeInventory" });
+  const watchedImageUrl = useWatch({ control: form.control, name: "imageUrl" });
 
-    if (categoryParam) {
-      const match = allCategories.find(
-        c => c.slug.toLowerCase() === categoryParam.toLowerCase() ||
-             c.name.toLowerCase() === categoryParam.toLowerCase() ||
-             c.id === Number(categoryParam)
-      );
-      if (match) {
-        if (match.parentId) {
-          // If the passed categoryParam is actually a subcategory
-          activeSub = match;
-          activeCat = allCategories.find(c => c.id === match.parentId) || null;
-        } else {
-          activeCat = match;
-        }
+  const getAvailableSizesForCategory = (catId: number, catList?: Category[]): string[] => {
+    if (!catId || !catList) return [];
+    const category = catList.find(c => c.id === catId);
+    if (!category) return [];
+
+    if (category.sizes && category.sizes.length > 0) {
+      return category.sizes;
+    }
+
+    if (category.parentId) {
+      const parent = catList.find(p => p.id === category.parentId);
+      if (parent?.sizes && parent.sizes.length > 0) {
+        return parent.sizes;
       }
     }
 
-    // Match subcategory strictly under the active main category
-    if (subcategoryParam) {
-      const subMatch = allCategories.find(
-        c => (c.slug.toLowerCase() === subcategoryParam.toLowerCase() ||
-              c.name.toLowerCase() === subcategoryParam.toLowerCase()) &&
-             (activeCat ? c.parentId === activeCat.id : true)
-      );
-      if (subMatch) {
-        activeSub = subMatch;
-        if (!activeCat && subMatch.parentId) {
-          activeCat = allCategories.find(c => c.id === subMatch.parentId) || null;
-        }
-      }
+    return [];
+  };
+
+  const availableSizes = getAvailableSizesForCategory(Number(watchedCategoryId), categories);
+  const hasSizes = availableSizes.length > 0;
+
+  useEffect(() => {
+    if (!hasSizes) {
+      form.setValue("sizeInventory", []);
+      form.setValue("sizes", []);
     }
+  }, [watchedCategoryId, hasSizes, form]);
 
-    // Subcategories belonging strictly to current active main category
-    const subs = activeCat ? allCategories.filter(c => c.isActive && c.parentId === activeCat.id) : [];
+  const openAddDialog = () => {
+    setEditingProduct(null);
+    setUploadError(null);
+    setImageMode("upload");
+    form.reset({
+      name: "", description: "", price: 0, imageUrl: "",
+      categoryId: categories?.[0]?.id || 0,
+      sizes: [], sizeInventory: [], stock: 0, isActive: true, isFeatured: false,
+    });
+    setIsDialogOpen(true);
+  };
 
-    return {
-      parentCategories: parents,
-      activeCategory: activeCat,
-      activeSubcategory: activeSub,
-      subcategoryOptions: subs
-    };
-  }, [allCategories, categoryParam, subcategoryParam]);
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product);
+    setUploadError(null);
+    setImageMode(product.imageUrl ? "url" : "upload");
+    const inv = (product.sizeInventory ?? []) as SizeInventoryItem[];
+    form.reset({
+      name: product.name,
+      description: product.description || "",
+      price: product.price,
+      imageUrl: product.imageUrl || "",
+      categoryId: product.categoryId,
+      sizes: inv.map(s => s.size),
+      sizeInventory: inv,
+      stock: product.stock,
+      isActive: product.isActive,
+      isFeatured: product.isFeatured,
+    });
+    setIsDialogOpen(true);
+  };
 
-  // Determine Category ID for product fetching
-  const queryCategoryId = activeSubcategory?.id ?? activeCategory?.id;
+  // Upload image to Supabase Bucket
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  const { data: products, isLoading } = useListProducts(
-    queryCategoryId ? { categoryId: queryCategoryId } : undefined,
-    { query: { queryKey: getListProductsQueryKey(queryCategoryId ? { categoryId: queryCategoryId } : undefined) } }
-  );
+    setIsUploading(true);
+    setUploadError(null);
 
-  const pageTitle = activeSubcategory
-    ? `${activeSubcategory.name}`
-    : activeCategory?.name ?? "All Products";
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (uploadErr) throw uploadErr;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      form.setValue("imageUrl", publicUrl, { shouldValidate: true });
+    } catch (err: any) {
+      setUploadError(err?.message || "Failed to upload image.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm("Are you sure you want to delete this product?")) {
+      deleteProduct.mutate({ id }, {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() }),
+      });
+    }
+  };
+
+  const toggleSize = (size: string, checked: boolean) => {
+    const current = form.getValues("sizeInventory");
+    if (checked) {
+      form.setValue("sizeInventory", [...current, { size, qty: 1 }]);
+      form.setValue("sizes", [...form.getValues("sizes"), size]);
+    } else {
+      form.setValue("sizeInventory", current.filter(s => s.size !== size));
+      form.setValue("sizes", form.getValues("sizes").filter(s => s !== size));
+    }
+  };
+
+  const updateQty = (size: string, qty: number) => {
+    const current = form.getValues("sizeInventory");
+    form.setValue("sizeInventory", current.map(s => s.size === size ? { ...s, qty } : s));
+  };
+
+  const onSubmit = (values: ProductValues) => {
+    const finalStock = hasSizes
+      ? values.sizeInventory.reduce((sum, s) => sum + s.qty, 0)
+      : values.stock;
+    const payload = { ...values, stock: finalStock };
+
+    if (editingProduct) {
+      updateProduct.mutate({ id: editingProduct.id, data: payload }, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+          setIsDialogOpen(false);
+        },
+      });
+    } else {
+      createProduct.mutate({ data: payload }, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+          setIsDialogOpen(false);
+        },
+      });
+    }
+  };
 
   return (
-    <Layout>
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 md:py-12">
-
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-6 flex-wrap font-sans">
-          <Link href="/" className="hover:text-gray-700 transition-colors">Home</Link>
-          <span>/</span>
-          {activeCategory && (
-            <>
-              <Link href={`/products?category=${activeCategory.slug}`} className="hover:text-gray-700 transition-colors capitalize">
-                {activeCategory.name}
-              </Link>
-              {activeSubcategory && (
-                <>
-                  <span>/</span>
-                  <span className="text-gray-700 font-medium">{activeSubcategory.name}</span>
-                </>
-              )}
-            </>
-          )}
-          {!activeCategory && <span className="text-gray-700">All Products</span>}
+    <AdminLayout>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-8 border-b border-border pb-6">
+        <div>
+          <h1 className="font-serif text-3xl font-bold uppercase tracking-tighter mb-2">Products</h1>
+          <p className="text-muted-foreground text-sm">Manage inventory and catalog.</p>
         </div>
+        <Button className="rounded-none uppercase font-bold tracking-widest text-xs h-10 px-6 flex gap-2" onClick={openAddDialog}>
+          <Plus className="w-4 h-4"/> Add Product
+        </Button>
+      </div>
 
-        {/* Page header */}
-        <div className="flex items-end justify-between mb-6 pb-4 border-b border-gray-100">
-          <h1 className="font-serif text-2xl md:text-3xl font-bold text-gray-900 tracking-tight capitalize">
-            {pageTitle}
-          </h1>
-          <span className="text-[13px] text-gray-400">{products?.length ?? 0} Items</span>
-        </div>
-
-        {/* Main Category Filter Pills */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <Link href="/products">
-            <button className={`h-8 px-4 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors border ${!categoryParam ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-700 hover:text-gray-900"}`}>
-              All
-            </button>
-          </Link>
-          {parentCategories.map(cat => {
-            const isActive = activeCategory?.id === cat.id;
-            return (
-              <Link key={cat.id} href={`/products?category=${cat.slug}`}>
-                <button className={`h-8 px-4 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors border ${isActive ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:border-gray-700 hover:text-gray-900"}`}>
-                  {cat.name}
-                </button>
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Dynamic Subcategory Pills */}
-        {activeCategory && subcategoryOptions.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-8">
-            <Link href={`/products?category=${activeCategory.slug}`}>
-              <button className={`h-7 px-3 text-[10px] font-medium uppercase tracking-[0.1em] transition-colors ${!activeSubcategory ? "text-gray-900 border-b-2 border-gray-900 font-bold" : "text-gray-400 hover:text-gray-700"}`}>
-                All {activeCategory.name}
-              </button>
-            </Link>
-            {subcategoryOptions.map(sub => (
-              <Link key={sub.id} href={`/products?category=${activeCategory.slug}&subcategory=${sub.slug}`}>
-                <button className={`h-7 px-3 text-[10px] font-medium uppercase tracking-[0.1em] transition-colors ${activeSubcategory?.id === sub.id ? "text-gray-900 border-b-2 border-gray-900 font-bold" : "text-gray-400 hover:text-gray-700"}`}>
-                  {sub.name}
-                </button>
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {!activeCategory && <div className="mb-8" />}
-
-        {/* Product Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
-            {Array(8).fill(0).map((_, i) => (
-              <div key={i}>
-                <Skeleton className="aspect-[3/4] w-full rounded-none bg-gray-100" />
-                <div className="mt-3 space-y-1.5">
-                  <Skeleton className="h-3.5 w-4/5 rounded-none bg-gray-100" />
-                  <Skeleton className="h-3 w-1/2 rounded-none bg-gray-100" />
+          <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">Loading...</div>
+        ) : !products || products.length === 0 ? (
+          <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">No products found</div>
+        ) : (
+          products.map(product => {
+            const inv = (product.sizeInventory ?? []) as SizeInventoryItem[];
+            const displaySizes = inv.length > 0
+              ? inv.map(s => `${s.size}(${s.qty})`).join(", ")
+              : product.stock > 0 ? `Qty: ${product.stock}` : "Out of Stock";
+            return (
+              <div key={product.id} className="border border-border bg-card flex flex-col group">
+                <div className="aspect-[4/3] bg-muted border-b border-border relative">
+                  {product.imageUrl ? (
+                    <img src={getImageUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[10px] uppercase text-muted-foreground font-bold tracking-widest">No Image</div>
+                  )}
+                  {!product.isActive && (
+                    <div className="absolute top-2 left-2 bg-muted-foreground text-background text-[10px] font-bold uppercase tracking-widest px-2 py-1">Draft</div>
+                  )}
+                  {product.isFeatured && (
+                    <div className="absolute top-2 right-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest px-2 py-1">Featured</div>
+                  )}
+                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
+                    <Button className="rounded-none h-10 w-10 bg-background border-border" onClick={() => openEditDialog(product)} size="icon" variant="outline">
+                      <Edit className="w-4 h-4"/>
+                    </Button>
+                    <Button className="rounded-none h-10 w-10" onClick={() => handleDelete(product.id)} size="icon" variant="destructive">
+                      <Trash2 className="w-4 h-4"/>
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-4 font-sans flex-1 flex flex-col">
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">{product.categoryName}</div>
+                  <div className="font-serif font-bold text-lg leading-tight mb-2 truncate">{product.name}</div>
+                  <div className="font-bold text-sm mb-4">{formatPKR(product.price)}</div>
+                  <div className="mt-auto text-xs text-muted-foreground border-t border-border pt-4">
+                    <div className="uppercase tracking-widest font-bold truncate">{displaySizes}</div>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : products && products.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
-            {products.map((product) => (
-              <Link key={product.id} href={`/products/${product.id}`} className="product-card group block">
-                <div className="relative overflow-hidden bg-gray-50 aspect-[3/4]">
-                  {product.imageUrl ? (
-                    <img
-                      src={getImageUrl(product.imageUrl)}
-                      alt={product.name}
-                      className="product-card-img w-full h-full object-cover object-center"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest">
-                      No Image
-                    </div>
-                  )}
-                  {product.stock === 0 && (
-                    <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                      <span className="text-[11px] uppercase tracking-widest font-semibold text-gray-600">Sold Out</span>
-                    </div>
-                  )}
-                  {product.stock > 0 && product.stock <= 2 && (
-                    <span className="absolute top-2 left-2 bg-gray-900 text-white text-[10px] px-2 py-0.5 uppercase tracking-wider font-semibold">
-                      Last {product.stock}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2.5 space-y-0.5">
-                  <h3 className="text-[13px] font-semibold text-gray-900 leading-snug group-hover:text-gray-500 transition-colors">{product.name}</h3>
-                  <p className="text-[13px] font-bold text-gray-900">{formatPKR(product.price)}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="py-32 flex flex-col items-center justify-center border border-gray-100 bg-gray-50">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-4">
-              {activeSubcategory?.name ?? activeCategory?.name ?? "Collection"}
-            </p>
-            <h2 className="font-serif text-3xl md:text-4xl font-bold text-gray-900 tracking-tight mb-4">Coming Soon</h2>
-            <p className="text-[14px] text-gray-500 max-w-sm text-center">We are curating new arrivals for this collection. Check back soon.</p>
-          </div>
+            );
+          })
         )}
       </div>
-    </Layout>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl rounded-none border border-border p-0 gap-0 max-h-[90vh] overflow-y-auto bg-background">
+          <div className="sticky top-0 bg-background z-10 border-b border-border p-6">
+            <DialogHeader>
+              <DialogTitle className="font-serif text-2xl font-bold uppercase tracking-tighter">
+                {editingProduct ? "Edit Product" : "New Product"}
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-8 font-sans">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-5">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Name</FormLabel>
+                        <FormControl><Input className="rounded-none border-border" {...field}/></FormControl>
+                        <FormMessage className="text-[10px]"/>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Price (PKR)</FormLabel>
+                          <FormControl><Input className="rounded-none border-border" type="number" {...field}/></FormControl>
+                          <FormMessage className="text-[10px]"/>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="categoryId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Category</FormLabel>
+                          <Select
+                            value={field.value ? field.value.toString() : ""}
+                            onValueChange={(v) => field.onChange(Number(v))}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="rounded-none border-border">
+                                <SelectValue placeholder="Select"/>
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="rounded-none">
+                              {categories?.map((cat) => {
+                                const parentCat = cat.parentId ? categories.find(p => p.id === cat.parentId) : null;
+                                const label = parentCat ? `${parentCat.name} / ${cat.name}` : cat.name;
+
+                                return (
+                                  <SelectItem key={cat.id} value={String(cat.id)}>
+                                    {parentCat ? `— ${label}` : label}
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-[10px]"/>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Sizes and Inventory Selection */}
+                  {hasSizes ? (
+                    <div>
+                      <p className="text-xs uppercase tracking-widest font-bold mb-2">Sizes &amp; Stock</p>
+                      <p className="text-[10px] text-muted-foreground mb-3">Check a size to add it. Set quantity for each selected size.</p>
+                      <div className="space-y-2">
+                        {availableSizes.map(size => {
+                          const inv = watchedSizeInventory ?? [];
+                          const item = inv.find(s => s.size === size);
+                          const isChecked = !!item;
+                          return (
+                            <div key={size} className="flex items-center gap-3 border border-border p-2.5">
+                              <Checkbox
+                                checked={isChecked}
+                                className="rounded-none"
+                                onCheckedChange={(checked) => toggleSize(size, !!checked)}
+                              />
+                              <span className="text-xs font-bold uppercase tracking-wider w-12 flex-shrink-0">
+                                {size}
+                              </span>
+                              <div className="flex-1 flex items-center gap-2">
+                                {isChecked ? (
+                                  <>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      value={item?.qty ?? 0}
+                                      onChange={(e) => updateQty(size, Number(e.target.value))}
+                                      className="h-7 w-20 rounded-none border-border text-xs"
+                                      placeholder="Qty"
+                                    />
+                                    <span className="text-[10px] text-muted-foreground">units</span>
+                                  </>
+                                ) : (
+                                  <span className="text-[10px] text-muted-foreground">Not available</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {watchedSizeInventory && watchedSizeInventory.length > 0 && (
+                        <p className="text-[10px] text-muted-foreground mt-2 font-bold">
+                          Total stock: {watchedSizeInventory.reduce((s, i) => s + i.qty, 0)} units
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="stock"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Stock Quantity</FormLabel>
+                          <FormControl><Input className="rounded-none border-border" min={0} type="number" {...field}/></FormControl>
+                          <p className="text-[10px] text-muted-foreground mt-1">This category has no sizes. Enter total available quantity.</p>
+                          <FormMessage className="text-[10px]"/>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+
+                {/* Right Column - Image & Meta */}
+                <div className="space-y-5">
+                  <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Image</FormLabel>
+                        
+                        {/* Tab mode selector */}
+                        <div className="flex gap-2 mb-2">
+                          <Button
+                            type="button"
+                            variant={imageMode === "upload" ? "default" : "outline"}
+                            size="sm"
+                            className="rounded-none text-[10px] uppercase tracking-widest h-8"
+                            onClick={() => setImageMode("upload")}
+                          >
+                            <Upload className="w-3 h-3 mr-1" /> File Upload
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={imageMode === "url" ? "default" : "outline"}
+                            size="sm"
+                            className="rounded-none text-[10px] uppercase tracking-widest h-8"
+                            onClick={() => setImageMode("url")}
+                          >
+                            <LinkIcon className="w-3 h-3 mr-1" /> External URL
+                          </Button>
+                        </div>
+
+                        {imageMode === "upload" ? (
+                          <div className="space-y-2">
+                            <FormControl>
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileUpload}
+                                disabled={isUploading}
+                                className="rounded-none border-border text-xs cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-none file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                              />
+                            </FormControl>
+                            {isUploading && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Loader2 className="w-3 h-3 animate-spin" /> Uploading to bucket...
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <FormControl>
+                            <Input
+                              className="rounded-none border-border text-xs"
+                              placeholder="https://..."
+                              value={watchedImageUrl}
+                              onChange={(e) => form.setValue("imageUrl", e.target.value, { shouldValidate: true })}
+                            />
+                          </FormControl>
+                        )}
+
+                        {/* Image Preview */}
+                        {watchedImageUrl && (
+                          <div className="mt-3 aspect-video bg-muted border border-border overflow-hidden relative">
+                            <img src={watchedImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+
+                        {uploadError && (
+                          <p className="text-[10px] text-destructive font-bold mt-1">{uploadError}</p>
+                        )}
+
+                        <FormMessage className="text-[10px]"/>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Description</FormLabel>
+                        <FormControl><Textarea className="rounded-none border-border min-h-[120px]" {...field}/></FormControl>
+                        <FormMessage className="text-[10px]"/>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex gap-6 pt-2">
+                    <FormField
+                      control={form.control}
+                      name="isActive"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-2 space-y-0">
+                          <FormControl><Switch checked={field.value} onCheckedChange={field.onChange}/></FormControl>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Active (Visible)</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="isFeatured"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-2 space-y-0">
+                          <FormControl><Switch checked={field.value} onCheckedChange={field.onChange}/></FormControl>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Featured on Home</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4 border-t border-border pt-6">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="rounded-none uppercase font-bold text-xs tracking-widest">
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending || isUploading} className="rounded-none uppercase font-bold text-xs tracking-widest px-8">
+                  {editingProduct ? "Update Product" : "Create Product"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </AdminLayout>
   );
 }
