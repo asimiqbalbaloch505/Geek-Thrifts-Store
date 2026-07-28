@@ -1,4 +1,6 @@
 import { Router } from "express";
+
+const router = Router();
 import multer from "multer";
 import path from "path";
 import fs from "fs";

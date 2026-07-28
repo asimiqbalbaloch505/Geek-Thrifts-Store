@@ -1,4 +1,6 @@
 import { Router } from "express";
+
+const router = Router();
 import { db } from "@workspace/db";
 import { ordersTable, productsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
