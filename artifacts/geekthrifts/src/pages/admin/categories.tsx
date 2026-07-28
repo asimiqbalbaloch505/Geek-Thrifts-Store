@@ -39,6 +39,12 @@ import { Switch } from "@/components/ui/switch";
 import { Edit, Plus, Trash2, FolderTree, X } from "lucide-react";
 import { format } from "date-fns";
 
+const PRESET_SIZE_GROUPS = [
+  { name: "Clothing", sizes: ["S", "M", "L", "XL", "XXL"] },
+  { name: "Pants", sizes: ["28", "30", "32", "34", "36", "38"] },
+  { name: "Shoes (UK)", sizes: ["6", "7", "8", "9", "10", "11"] },
+];
+
 const categorySchema = z.object({
   name: z.string().min(2, "Name is required"),
   slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only"),
@@ -76,16 +82,22 @@ export default function AdminCategories() {
 
   const currentSizes = form.watch("sizes") || [];
 
-  const addSize = () => {
-    const trimmed = newSizeInput.trim().toUpperCase();
+  const addSize = (sizeValue?: string) => {
+    const val = sizeValue ?? newSizeInput;
+    const trimmed = val.trim().toUpperCase();
     if (trimmed && !currentSizes.includes(trimmed)) {
-      form.setValue("sizes", [...currentSizes, trimmed]);
-      setNewSizeInput("");
+      form.setValue("sizes", [...currentSizes, trimmed], { shouldValidate: true });
+      if (!sizeValue) setNewSizeInput("");
     }
   };
 
   const removeSize = (sizeToRemove: string) => {
-    form.setValue("sizes", currentSizes.filter(s => s !== sizeToRemove));
+    form.setValue("sizes", currentSizes.filter(s => s !== sizeToRemove), { shouldValidate: true });
+  };
+
+  const applyPreset = (presetSizes: string[]) => {
+    const merged = Array.from(new Set([...currentSizes, ...presetSizes.map(s => s.toUpperCase())]));
+    form.setValue("sizes", merged, { shouldValidate: true });
   };
 
   const openAddDialog = () => {
@@ -285,35 +297,59 @@ export default function AdminCategories() {
                 </FormItem>
               )} />
 
-              {/* Sizes Setup Field */}
-              <div className="space-y-2">
-                <FormLabel className="text-xs uppercase tracking-widest font-bold">Category Sizes</FormLabel>
-                <div className="flex gap-2">
-                  <Input 
-                    placeholder="e.g. S, M, L, XL or 8, 9, 10" 
-                    value={newSizeInput} 
-                    onChange={(e) => setNewSizeInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSize(); }}}
-                    className="rounded-none border-border text-xs"
-                  />
-                  <Button type="button" onClick={addSize} variant="outline" className="rounded-none uppercase text-xs font-bold px-4">
-                    Add
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5 pt-2">
-                  {currentSizes.map((size) => (
-                    <span key={size} className="inline-flex items-center gap-1 bg-muted border border-border px-2 py-1 text-xs font-mono font-bold uppercase">
-                      {size}
-                      <button type="button" onClick={() => removeSize(size)} className="hover:text-destructive">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <p className="text-[10px] text-muted-foreground">
-                  Leave empty if subcategory should automatically inherit sizes from its parent.
-                </p>
-              </div>
+              {/* Sizes Setup Field (wrapped inside FormField to ensure Shadcn Form context compliance) */}
+              <FormField
+                control={form.control}
+                name="sizes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Category Sizes</FormLabel>
+                    
+                    {/* Presets */}
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      <span className="text-[10px] text-muted-foreground mr-1 self-center">Presets:</span>
+                      {PRESET_SIZE_GROUPS.map((group) => (
+                        <button
+                          key={group.name}
+                          type="button"
+                          onClick={() => applyPreset(group.sizes)}
+                          className="text-[10px] bg-muted hover:bg-black hover:text-white border border-border px-1.5 py-0.5 font-bold transition-colors"
+                        >
+                          + {group.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="e.g. S, M, L, XL or 8, 9, 10" 
+                        value={newSizeInput} 
+                        onChange={(e) => setNewSizeInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSize(); }}}
+                        className="rounded-none border-border text-xs"
+                      />
+                      <Button type="button" onClick={() => addSize()} variant="outline" className="rounded-none uppercase text-xs font-bold px-4">
+                        Add
+                      </Button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 pt-2">
+                      {(field.value || []).map((size) => (
+                        <span key={size} className="inline-flex items-center gap-1 bg-muted border border-border px-2 py-1 text-xs font-mono font-bold uppercase">
+                          {size}
+                          <button type="button" onClick={() => removeSize(size)} className="hover:text-destructive">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <FormMessage className="text-[10px]" />
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Leave empty if subcategory should automatically inherit sizes from its parent.
+                    </p>
+                  </FormItem>
+                )}
+              />
 
               <FormField control={form.control} name="isActive" render={({ field }) => (
                 <FormItem className="flex items-center gap-2 space-y-0 pt-2">

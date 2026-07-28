@@ -42,10 +42,11 @@ router.post("/", async (req, res): Promise<void> => {
   }
   
   try {
-    // Manually ensure parentId is explicitly passed if present in req.body
+    // Explicitly grab parentId and sizes from req.body to prevent losing sizes array
     const insertData = {
       ...parsed.data,
       parentId: req.body.parentId !== undefined ? (req.body.parentId ? Number(req.body.parentId) : null) : null,
+      sizes: Array.isArray(req.body.sizes) ? req.body.sizes : (parsed.data as any).sizes ?? [],
     };
 
     const [category] = await db.insert(categoriesTable).values(insertData).returning();
@@ -69,11 +70,15 @@ router.put("/:id", async (req, res): Promise<void> => {
   }
   
   try {
-    // Explicitly grab parentId from req.body so Zod schema stripping doesn't lose it
+    // Explicitly grab parentId and sizes from req.body so Zod schema stripping doesn't lose them
     const updatePayload: Record<string, any> = { ...parsed.data };
     
     if ("parentId" in req.body) {
       updatePayload.parentId = req.body.parentId ? Number(req.body.parentId) : null;
+    }
+
+    if ("sizes" in req.body) {
+      updatePayload.sizes = Array.isArray(req.body.sizes) ? req.body.sizes : [];
     }
 
     const [updated] = await db
