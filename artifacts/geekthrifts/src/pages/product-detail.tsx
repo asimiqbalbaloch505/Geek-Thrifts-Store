@@ -3,7 +3,7 @@ import { useGetProduct, getGetProductQueryKey } from "@workspace/api-client-reac
 import { useParams, Link } from "wouter";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
 import { Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
@@ -30,7 +30,7 @@ function TieSizeGuide() {
   return (
     <div className="mb-6">
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-500 hover:text-black transition-colors mb-3"
       >
         Tie Size Guide
@@ -38,24 +38,40 @@ function TieSizeGuide() {
       </button>
       {open && (
         <div className="border border-gray-100 text-[11px] mb-4">
-          <div className="px-3 py-2 bg-gray-50 text-[10px] uppercase tracking-[0.12em] font-bold text-gray-500">Length</div>
-          <div className="grid grid-cols-4 px-3 py-1.5 bg-gray-50/60 font-semibold uppercase tracking-[0.06em] text-gray-400 border-b border-gray-100 text-[10px]">
-            <span>Name</span><span>Inches</span><span>cm</span><span>Best For</span>
+          <div className="px-3 py-2 bg-gray-50 text-[10px] uppercase tracking-[0.12em] font-bold text-gray-500">
+            Length
           </div>
-          {TIE_LENGTH_GUIDE.map(row => (
-            <div key={row.label} className="grid grid-cols-4 px-3 py-2 border-b border-gray-50 text-gray-600">
+          <div className="grid grid-cols-4 px-3 py-1.5 bg-gray-50/60 font-semibold uppercase tracking-[0.06em] text-gray-400 border-b border-gray-100 text-[10px]">
+            <span>Name</span>
+            <span>Inches</span>
+            <span>cm</span>
+            <span>Best For</span>
+          </div>
+          {TIE_LENGTH_GUIDE.map((row) => (
+            <div
+              key={row.label}
+              className="grid grid-cols-4 px-3 py-2 border-b border-gray-50 text-gray-600"
+            >
               <span className="font-semibold text-gray-900">{row.label}</span>
               <span>{row.inches}</span>
               <span className="text-gray-400">{row.cm}</span>
               <span>{row.for}</span>
             </div>
           ))}
-          <div className="px-3 py-2 bg-gray-50 text-[10px] uppercase tracking-[0.12em] font-bold text-gray-500 border-t border-gray-100">Width</div>
-          <div className="grid grid-cols-4 px-3 py-1.5 bg-gray-50/60 font-semibold uppercase tracking-[0.06em] text-gray-400 border-b border-gray-100 text-[10px]">
-            <span>Name</span><span>Inches</span><span>cm</span><span>Best For</span>
+          <div className="px-3 py-2 bg-gray-50 text-[10px] uppercase tracking-[0.12em] font-bold text-gray-500 border-t border-gray-100">
+            Width
           </div>
-          {TIE_WIDTH_GUIDE.map(row => (
-            <div key={row.label} className="grid grid-cols-4 px-3 py-2 border-b border-gray-50 text-gray-600 last:border-b-0">
+          <div className="grid grid-cols-4 px-3 py-1.5 bg-gray-50/60 font-semibold uppercase tracking-[0.06em] text-gray-400 border-b border-gray-100 text-[10px]">
+            <span>Name</span>
+            <span>Inches</span>
+            <span>cm</span>
+            <span>Best For</span>
+          </div>
+          {TIE_WIDTH_GUIDE.map((row) => (
+            <div
+              key={row.label}
+              className="grid grid-cols-4 px-3 py-2 border-b border-gray-50 text-gray-600 last:border-b-0"
+            >
               <span className="font-semibold text-gray-900">{row.label}</span>
               <span>{row.inches}</span>
               <span className="text-gray-400">{row.cm}</span>
@@ -78,7 +94,7 @@ export default function ProductDetail() {
   const { toast } = useToast();
 
   const { data: product, isLoading } = useGetProduct(productId, {
-    query: { enabled: !!productId, queryKey: getGetProductQueryKey(productId) }
+    query: { enabled: !!productId, queryKey: getGetProductQueryKey(productId) },
   });
 
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -86,45 +102,72 @@ export default function ProductDetail() {
 
   const categorySlug = product?.categoryName?.toLowerCase() ?? "";
   const isNoSize = NO_SIZE_SLUGS.has(categorySlug);
-  const isTie = categorySlug === "ties";
-  const isShoe = categorySlug === "shoes";
+  const isTie = categorySlug.includes("tie");
+  const isShoe = categorySlug.includes("shoe");
 
   const sizeInventory = ((product as any)?.sizeInventory ?? []) as SizeInventoryItem[];
   const hasSizeInventory = sizeInventory.length > 0;
 
-  // Total stock: sum of all sizes, or flat stock for no-size categories
+  // Pre-select size automatically if there's only 1 available size in stock
+  useEffect(() => {
+    if (hasSizeInventory) {
+      const availableSizes = sizeInventory.filter((s) => s.qty > 0);
+      if (availableSizes.length === 1) {
+        setSelectedSize(availableSizes[0].size);
+      }
+    }
+  }, [product, hasSizeInventory]);
+
+  // Total stock across all sizes or flat stock
   const totalStock = product?.stock ?? 0;
 
-  // Stock for selected size
+  // Selected size stock calculations
   const selectedSizeItem = hasSizeInventory
-    ? sizeInventory.find(s => s.size === selectedSize)
+    ? sizeInventory.find((s) => s.size === selectedSize)
     : null;
   const selectedSizeStock = selectedSizeItem?.qty ?? 0;
 
-  // Max qty the user can order
-  const maxQty = hasSizeInventory && selectedSize
-    ? selectedSizeStock
+  // Maximum quantity achievable
+  const maxQty = hasSizeInventory
+    ? selectedSize
+      ? selectedSizeStock
+      : 0
     : totalStock;
 
   const handleAddToCart = () => {
     if (!product) return;
 
     if (hasSizeInventory && !selectedSize) {
-      toast({ title: "Select a size", description: "Please choose a size before adding to cart.", variant: "destructive" });
+      toast({
+        title: "Select a size",
+        description: "Please choose a size before adding to cart.",
+        variant: "destructive",
+      });
       return;
     }
     if (hasSizeInventory && selectedSizeStock === 0) {
-      toast({ title: "Size unavailable", description: "This size is currently out of stock.", variant: "destructive" });
+      toast({
+        title: "Size unavailable",
+        description: "This size is currently out of stock.",
+        variant: "destructive",
+      });
       return;
     }
-    if (!hasSizeInventory && !isNoSize && totalStock === 0) {
-      toast({ title: "Out of stock", description: "This product is currently out of stock.", variant: "destructive" });
+    if (!hasSizeInventory && totalStock === 0) {
+      toast({
+        title: "Out of stock",
+        description: "This product is currently out of stock.",
+        variant: "destructive",
+      });
       return;
     }
 
     const sizeLabel = selectedSize || "One Size";
     addToCart(product, sizeLabel, quantity);
-    toast({ title: "Added to cart", description: `${quantity}x ${product.name} added to your cart.` });
+    toast({
+      title: "Added to cart",
+      description: `${quantity}x ${product.name} added to your cart.`,
+    });
   };
 
   if (isLoading) {
@@ -149,8 +192,12 @@ export default function ProductDetail() {
     return (
       <Layout>
         <div className="max-w-[1400px] mx-auto px-4 py-28 text-center">
-          <h1 className="font-serif text-3xl font-bold tracking-tight mb-3 text-gray-900">Product Not Found</h1>
-          <p className="text-[14px] text-gray-500 mb-6">This product doesn't exist or has been removed.</p>
+          <h1 className="font-serif text-3xl font-bold tracking-tight mb-3 text-gray-900">
+            Product Not Found
+          </h1>
+          <p className="text-[14px] text-gray-500 mb-6">
+            This product doesn't exist or has been removed.
+          </p>
           <Link href="/products">
             <button className="h-10 px-8 bg-gray-900 text-white text-[12px] uppercase tracking-[0.12em] font-semibold hover:bg-gray-800 transition-colors">
               Back to Products
@@ -168,9 +215,14 @@ export default function ProductDetail() {
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 md:py-16">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-8">
-          <Link href="/" className="hover:text-gray-700 transition-colors">Home</Link>
+          <Link href="/" className="hover:text-gray-700 transition-colors">
+            Home
+          </Link>
           <span>/</span>
-          <Link href={`/products?category=${product.categoryName?.toLowerCase()}`} className="hover:text-gray-700 transition-colors capitalize">
+          <Link
+            href={`/products?category=${product.categoryName?.toLowerCase()}`}
+            className="hover:text-gray-700 transition-colors capitalize"
+          >
             {product.categoryName}
           </Link>
           <span>/</span>
@@ -193,7 +245,9 @@ export default function ProductDetail() {
             )}
             {isCompletelyOutOfStock && (
               <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                <span className="text-[13px] uppercase tracking-widest font-semibold text-gray-700">Out of Stock</span>
+                <span className="text-[13px] uppercase tracking-widest font-semibold text-gray-700">
+                  Out of Stock
+                </span>
               </div>
             )}
             {!isCompletelyOutOfStock && totalStock <= 2 && (
@@ -203,9 +257,11 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {/* Details */}
+          {/* Product Details */}
           <div className="flex flex-col">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-2">{product.categoryName}</p>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-2">
+              {product.categoryName}
+            </p>
             <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-gray-900 leading-tight mb-3">
               {product.name}
             </h1>
@@ -214,10 +270,11 @@ export default function ProductDetail() {
             </p>
 
             <p className="text-[14px] text-gray-500 leading-relaxed mb-8">
-              {product.description ?? "A carefully selected piece from GeekThrifts. Authenticated, cleaned, and pressed for the modern Pakistani professional."}
+              {product.description ??
+                "A carefully selected piece from GeekThrifts. Authenticated, cleaned, and pressed for the modern Pakistani professional."}
             </p>
 
-            {/* Size selector — only for categories with sizes */}
+            {/* Size Selector */}
             {hasSizeInventory && (
               <div className="mb-6">
                 <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">
@@ -238,7 +295,11 @@ export default function ProductDetail() {
                         key={size}
                         onClick={() => {
                           if (isOutOfStock) {
-                            toast({ title: "Size unavailable", description: `${label} is currently out of stock.`, variant: "destructive" });
+                            toast({
+                              title: "Size unavailable",
+                              description: `${label} is currently out of stock.`,
+                              variant: "destructive",
+                            });
                             return;
                           }
                           setSelectedSize(size);
@@ -249,8 +310,8 @@ export default function ProductDetail() {
                           isOutOfStock
                             ? "border-gray-100 text-gray-300 cursor-not-allowed bg-gray-50"
                             : isSelected
-                              ? "bg-gray-900 text-white border-gray-900"
-                              : "bg-white text-gray-700 border-gray-200 hover:border-gray-900"
+                            ? "bg-gray-900 text-white border-gray-900"
+                            : "bg-white text-gray-700 border-gray-200 hover:border-gray-900"
                         }`}
                       >
                         {label}
@@ -274,20 +335,25 @@ export default function ProductDetail() {
             {/* Size guide for ties */}
             {isTie && <TieSizeGuide />}
 
-            {/* Quantity */}
+            {/* Quantity Selector */}
             <div className="mb-6">
-              <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">Quantity</p>
+              <p className="text-[11px] uppercase tracking-[0.15em] font-semibold text-gray-700 mb-3">
+                Quantity
+              </p>
               <div className="flex items-center border border-gray-200 w-fit">
                 <button
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  disabled={quantity <= 1}
+                  className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30"
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="w-10 text-center text-[14px] font-semibold">{quantity}</span>
+                <span className="w-10 text-center text-[14px] font-semibold">
+                  {quantity}
+                </span>
                 <button
-                  onClick={() => setQuantity(q => Math.min(maxQty, q + 1))}
-                  disabled={maxQty === 0}
+                  onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                  disabled={maxQty === 0 || quantity >= maxQty}
                   className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -295,9 +361,13 @@ export default function ProductDetail() {
               </div>
             </div>
 
+            {/* Add to Cart Button */}
             <button
               onClick={handleAddToCart}
-              disabled={isCompletelyOutOfStock || (hasSizeInventory && selectedSize !== "" && selectedSizeStock === 0)}
+              disabled={
+                isCompletelyOutOfStock ||
+                (hasSizeInventory && selectedSize !== "" && selectedSizeStock === 0)
+              }
               className="h-12 w-full bg-gray-900 text-white text-[12px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed mb-4"
             >
               {isCompletelyOutOfStock ? "Out of Stock" : "Add to Cart"}
@@ -305,11 +375,17 @@ export default function ProductDetail() {
 
             <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100 mt-4">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-900 mb-0.5">Delivery</p>
-                <p className="text-[12px] text-gray-500">Cash on Delivery, Nationwide</p>
+                <p className="text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-900 mb-0.5">
+                  Delivery
+                </p>
+                <p className="text-[12px] text-gray-500">
+                  Cash on Delivery, Nationwide
+                </p>
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-900 mb-0.5">Returns</p>
+                <p className="text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-900 mb-0.5">
+                  Returns
+                </p>
                 <p className="text-[12px] text-gray-500">3-Day Return Policy</p>
               </div>
             </div>

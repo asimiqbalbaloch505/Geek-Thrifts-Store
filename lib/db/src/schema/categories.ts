@@ -11,6 +11,7 @@ export const categoriesTable = pgTable(
     description: text("description"),
     imageUrl: text("image_url"),
     parentId: integer("parent_id"),
+    sizes: text("sizes").array().notNull().default([]), // <--- Added dynamic sizes field
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },

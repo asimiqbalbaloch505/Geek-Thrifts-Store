@@ -8,6 +8,7 @@ import {
   getListProductsQueryKey,
   getListCategoriesQueryKey,
   Product,
+  Category,
 } from "@workspace/api-client-react";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -62,24 +63,10 @@ const productSchema = z.object({
 
 type ProductValues = z.infer<typeof productSchema>;
 
-// Categories that have NO size selection at all
-const NO_SIZE_SLUGS = new Set(["watches", "belts"]);
-
-// Size options per category slug
-const SIZE_OPTIONS: Record<string, string[]> = {
-  shirts:   ["S", "M", "L", "XL"],
-  trousers: ["S", "M", "L", "XL"],
-  ties:     [],  // ties have no sizes — just stock qty
-  shoes:    ["6", "7", "8", "9", "10", "11", "12"],
-  watches:  [],
-  belts:    [],
-};
-
 export default function AdminProducts() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>("");
 
   const { data: products, isLoading } = useListProducts(undefined, {
     query: { queryKey: getListProductsQueryKey() },
@@ -103,40 +90,42 @@ export default function AdminProducts() {
 
   const watchedCategoryId = useWatch({ control: form.control, name: "categoryId" });
   const watchedSizeInventory = useWatch({ control: form.control, name: "sizeInventory" });
-  const selectedCategory = categories?.find(c => c.id === Number(watchedCategoryId));
-  const categorySlug = selectedCategory?.slug ?? "";
-  const isNoSize = NO_SIZE_SLUGS.has(categorySlug);
-  
-  const getAvailableSizes = (category: typeof selectedCategory) => {
-    if (!category) return [];
-    const slug = category.slug;
 
-    if (SIZE_OPTIONS[slug]) return SIZE_OPTIONS[slug];
-    
-    // Fallback to parent sizing for subcategories
-    if (slug.includes("shirt")) return SIZE_OPTIONS["shirts"];
-    if (slug.includes("trouser") || slug.includes("pant")) return SIZE_OPTIONS["trousers"];
-    if (slug.includes("shoe")) return SIZE_OPTIONS["shoes"];
+  // Dynamic helper to determine available sizes with parent category fallback
+  const getAvailableSizesForCategory = (catId: number, catList?: Category[]): string[] => {
+    if (!catId || !catList) return [];
+    const category = catList.find(c => c.id === catId);
+    if (!category) return [];
+
+    // If subcategory has own sizes, return them
+    if (category.sizes && category.sizes.length > 0) {
+      return category.sizes;
+    }
+
+    // Otherwise inherit parent category sizes
+    if (category.parentId) {
+      const parent = catList.find(p => p.id === category.parentId);
+      if (parent?.sizes && parent.sizes.length > 0) {
+        return parent.sizes;
+      }
+    }
 
     return [];
   };
 
-  const availableSizes = getAvailableSizes(selectedCategory);
-  const hasSizes = !isNoSize && availableSizes.length > 0;
-  const isTie = categorySlug === "ties";
+  const selectedCategory = categories?.find(c => c.id === Number(watchedCategoryId));
+  const availableSizes = getAvailableSizesForCategory(Number(watchedCategoryId), categories);
+  const hasSizes = availableSizes.length > 0;
 
-  // When category changes, reset sizeInventory
   useEffect(() => {
-    const newSizes = SIZE_OPTIONS[categorySlug] ?? [];
-    if (isNoSize || newSizes.length === 0) {
+    if (!hasSizes) {
       form.setValue("sizeInventory", []);
       form.setValue("sizes", []);
     }
-  }, [categorySlug, isNoSize, form]);
+  }, [watchedCategoryId, hasSizes, form]);
 
   const openAddDialog = () => {
     setEditingProduct(null);
-    setImagePreview("");
     form.reset({
       name: "", description: "", price: 0, imageUrl: "",
       categoryId: categories?.[0]?.id || 0,
@@ -147,7 +136,6 @@ export default function AdminProducts() {
 
   const openEditDialog = (product: Product) => {
     setEditingProduct(product);
-    setImagePreview(product.imageUrl || "");
     const inv = (product.sizeInventory ?? []) as SizeInventoryItem[];
     form.reset({
       name: product.name,
@@ -284,7 +272,6 @@ export default function AdminProducts() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="p-6 space-y-8 font-sans">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left column */}
                 <div className="space-y-5">
                   <FormField
                     control={form.control}
@@ -345,8 +332,8 @@ export default function AdminProducts() {
                     />
                   </div>
 
-                  {/* Sizes with per-size qty */}
-                  {hasSizes && (
+                  {/* Sizes and Inventory Selection */}
+                  {hasSizes ? (
                     <div>
                       <p className="text-xs uppercase tracking-widest font-bold mb-2">Sizes &amp; Stock</p>
                       <p className="text-[10px] text-muted-foreground mb-3">Check a size to add it. Set quantity for each selected size.</p>
@@ -362,8 +349,8 @@ export default function AdminProducts() {
                                 className="rounded-none"
                                 onCheckedChange={(checked) => toggleSize(size, !!checked)}
                               />
-                              <span className="text-xs font-bold uppercase tracking-wider w-10 flex-shrink-0">
-                                {categorySlug === "shoes" ? `UK ${size}` : size}
+                              <span className="text-xs font-bold uppercase tracking-wider w-12 flex-shrink-0">
+                                {size}
                               </span>
                               <div className="flex-1 flex items-center gap-2">
                                 {isChecked ? (
@@ -377,9 +364,6 @@ export default function AdminProducts() {
                                       placeholder="Qty"
                                     />
                                     <span className="text-[10px] text-muted-foreground">units</span>
-                                    {(item?.qty ?? 0) === 0 && (
-                                      <span className="text-[10px] text-amber-600 font-bold uppercase tracking-wide">Out of Stock</span>
-                                    )}
                                   </>
                                 ) : (
                                   <span className="text-[10px] text-muted-foreground">Not available</span>
@@ -395,10 +379,7 @@ export default function AdminProducts() {
                         </p>
                       )}
                     </div>
-                  )}
-
-                  {/* Ties: just quantity (no sizes) */}
-                  {isTie && (
+                  ) : (
                     <FormField
                       control={form.control}
                       name="stock"
@@ -406,23 +387,7 @@ export default function AdminProducts() {
                         <FormItem>
                           <FormLabel className="text-xs uppercase tracking-widest font-bold">Stock Quantity</FormLabel>
                           <FormControl><Input className="rounded-none border-border" min={0} type="number" {...field}/></FormControl>
-                          <p className="text-[10px] text-muted-foreground">Ties have no size selection. Enter total available quantity.</p>
-                          <FormMessage className="text-[10px]"/>
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {/* Watches & belts: just quantity (no sizes) */}
-                  {isNoSize && (
-                    <FormField
-                      control={form.control}
-                      name="stock"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Stock Quantity</FormLabel>
-                          <FormControl><Input className="rounded-none border-border" min={0} type="number" {...field}/></FormControl>
-                          <p className="text-[10px] text-muted-foreground">No size selection for this category.</p>
+                          <p className="text-[10px] text-muted-foreground mt-1">This category has no sizes. Enter total available quantity.</p>
                           <FormMessage className="text-[10px]"/>
                         </FormItem>
                       )}
@@ -430,91 +395,63 @@ export default function AdminProducts() {
                   )}
                 </div>
 
-                {/* Right column — image URL */}
-                <div className="space-y-4">
+                {/* Right Column */}
+                <div className="space-y-5">
                   <FormField
                     control={form.control}
                     name="imageUrl"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Image URL</FormLabel>
-                        <FormControl>
-                          <Input
-                            className="rounded-none border-border text-xs"
-                            placeholder="https://i.imgur.com/example.jpg"
-                            {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              setImagePreview(e.target.value);
-                            }}
-                          />
-                        </FormControl>
-                        <p className="text-[10px] text-muted-foreground">
-                          Paste a direct image link from Imgur, Cloudinary, or any image host.
-                        </p>
-                        {(imagePreview || field.value) && (
-                          <div className="aspect-[4/3] bg-muted border border-border overflow-hidden mt-2">
-                            <img
-                              src={getImageUrl(imagePreview || field.value || "")}
-                              alt="Preview"
-                              className="w-full h-full object-cover"
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                            />
-                          </div>
-                        )}
+                        <FormControl><Input className="rounded-none border-border text-xs" placeholder="https://..." {...field}/></FormControl>
                         <FormMessage className="text-[10px]"/>
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Description</FormLabel>
+                        <FormControl><Textarea className="rounded-none border-border min-h-[120px]" {...field}/></FormControl>
+                        <FormMessage className="text-[10px]"/>
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex gap-6 pt-2">
+                    <FormField
+                      control={form.control}
+                      name="isActive"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-2 space-y-0">
+                          <FormControl><Switch checked={field.value} onCheckedChange={field.onChange}/></FormControl>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Active (Visible)</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="isFeatured"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center gap-2 space-y-0">
+                          <FormControl><Switch checked={field.value} onCheckedChange={field.onChange}/></FormControl>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Featured on Home</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold">Description</FormLabel>
-                    <FormControl>
-                      <Textarea className="resize-none min-h-[80px] rounded-none border-border" {...field}/>
-                    </FormControl>
-                    <FormMessage className="text-[10px]"/>
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex gap-8 border-t border-border pt-6">
-                <FormField
-                  control={form.control}
-                  name="isActive"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                      <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Active (Visible)</FormLabel>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="isFeatured"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-2 space-y-0">
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                      <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Featured on Home</FormLabel>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="sticky bottom-0 bg-background pt-4 pb-2 border-t border-border flex justify-end gap-4">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="rounded-none font-bold uppercase text-xs tracking-widest">
+              <div className="flex justify-end gap-4 border-t border-border pt-6">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="rounded-none uppercase font-bold text-xs tracking-widest">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending} className="rounded-none font-bold uppercase text-xs tracking-widest px-8">
+                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending} className="rounded-none uppercase font-bold text-xs tracking-widest px-8">
                   {editingProduct ? "Update Product" : "Create Product"}
                 </Button>
               </div>

@@ -36,13 +36,14 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Edit, Plus, Trash2, FolderTree } from "lucide-react";
+import { Edit, Plus, Trash2, FolderTree, X } from "lucide-react";
 import { format } from "date-fns";
 
 const categorySchema = z.object({
   name: z.string().min(2, "Name is required"),
   slug: z.string().min(2, "Slug is required").regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only"),
   parentId: z.number().nullable().optional(), 
+  sizes: z.array(z.string()).default([]),
   isActive: z.boolean(),
 });
 
@@ -52,6 +53,7 @@ export default function AdminCategories() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [newSizeInput, setNewSizeInput] = useState("");
 
   const { data: categories, isLoading } = useListCategories({
     query: { queryKey: getListCategoriesQueryKey() }
@@ -67,16 +69,33 @@ export default function AdminCategories() {
       name: "",
       slug: "",
       parentId: null,
+      sizes: [],
       isActive: true,
     }
   });
 
+  const currentSizes = form.watch("sizes") || [];
+
+  const addSize = () => {
+    const trimmed = newSizeInput.trim().toUpperCase();
+    if (trimmed && !currentSizes.includes(trimmed)) {
+      form.setValue("sizes", [...currentSizes, trimmed]);
+      setNewSizeInput("");
+    }
+  };
+
+  const removeSize = (sizeToRemove: string) => {
+    form.setValue("sizes", currentSizes.filter(s => s !== sizeToRemove));
+  };
+
   const openAddDialog = () => {
     setEditingCategory(null);
+    setNewSizeInput("");
     form.reset({
       name: "",
       slug: "",
       parentId: null,
+      sizes: [],
       isActive: true,
     });
     setIsDialogOpen(true);
@@ -84,10 +103,12 @@ export default function AdminCategories() {
 
   const openEditDialog = (category: Category) => {
     setEditingCategory(category);
+    setNewSizeInput("");
     form.reset({
       name: category.name,
       slug: category.slug,
       parentId: category.parentId ?? null,
+      sizes: category.sizes || [],
       isActive: category.isActive,
     });
     setIsDialogOpen(true);
@@ -105,6 +126,7 @@ export default function AdminCategories() {
     const payload = {
       ...values,
       parentId: values.parentId ? Number(values.parentId) : null,
+      sizes: values.sizes ?? [],
     };
 
     if (editingCategory) {
@@ -149,10 +171,12 @@ export default function AdminCategories() {
         ) : (
           categories.map(category => {
             const parentCat = categories.find(c => c.id === category.parentId);
+            const sizesToDisplay = category.sizes && category.sizes.length > 0
+              ? category.sizes
+              : parentCat?.sizes || [];
 
             return (
               <div key={category.id} className="border border-border bg-card flex flex-col p-6 group relative">
-                {/* Top Badges */}
                 <div className="flex justify-between items-start mb-4">
                   <div className="font-serif font-bold text-xl uppercase tracking-wider">{category.name}</div>
                   <div className="flex items-center gap-2">
@@ -174,7 +198,22 @@ export default function AdminCategories() {
                   </span>
                 )}
 
-                <div className="text-xs font-mono text-muted-foreground mb-6">/{category.slug}</div>
+                <div className="text-xs font-mono text-muted-foreground mb-3">/{category.slug}</div>
+
+                <div className="mb-6">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Available Sizes</div>
+                  <div className="flex flex-wrap gap-1">
+                    {sizesToDisplay.length > 0 ? (
+                      sizesToDisplay.map(size => (
+                        <span key={size} className="text-[10px] border border-border px-2 py-0.5 font-mono uppercase font-bold bg-muted">
+                          {size}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground italic">No sizes (Direct Stock)</span>
+                    )}
+                  </div>
+                </div>
 
                 <div className="mt-auto flex justify-between items-center text-[10px] uppercase tracking-widest font-bold border-t border-border pt-4">
                   <div>{category.productCount ?? 0} Products</div>
@@ -186,7 +225,6 @@ export default function AdminCategories() {
         )}
       </div>
 
-      {/* Add / Edit Category Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md rounded-none border border-border p-6 bg-background">
           <DialogHeader className="mb-6 pb-4 border-b border-border">
@@ -224,7 +262,6 @@ export default function AdminCategories() {
                 </FormItem>
               )} />
 
-              {/* Parent Category Field */}
               <FormField control={form.control} name="parentId" render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-xs uppercase tracking-widest font-bold">Parent Category (Optional)</FormLabel>
@@ -247,6 +284,36 @@ export default function AdminCategories() {
                   <FormMessage className="text-[10px]" />
                 </FormItem>
               )} />
+
+              {/* Sizes Setup Field */}
+              <div className="space-y-2">
+                <FormLabel className="text-xs uppercase tracking-widest font-bold">Category Sizes</FormLabel>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="e.g. S, M, L, XL or 8, 9, 10" 
+                    value={newSizeInput} 
+                    onChange={(e) => setNewSizeInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSize(); }}}
+                    className="rounded-none border-border text-xs"
+                  />
+                  <Button type="button" onClick={addSize} variant="outline" className="rounded-none uppercase text-xs font-bold px-4">
+                    Add
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-2">
+                  {currentSizes.map((size) => (
+                    <span key={size} className="inline-flex items-center gap-1 bg-muted border border-border px-2 py-1 text-xs font-mono font-bold uppercase">
+                      {size}
+                      <button type="button" onClick={() => removeSize(size)} className="hover:text-destructive">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Leave empty if subcategory should automatically inherit sizes from its parent.
+                </p>
+              </div>
 
               <FormField control={form.control} name="isActive" render={({ field }) => (
                 <FormItem className="flex items-center gap-2 space-y-0 pt-2">
