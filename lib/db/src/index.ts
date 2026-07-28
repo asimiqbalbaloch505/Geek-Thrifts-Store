@@ -7,15 +7,15 @@ const { Pool } = pg;
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error(
-    "DATABASE_URL must be set.",
-  );
+  throw new Error("DATABASE_URL must be set.");
 }
 
 export const pool = new Pool({
   connectionString,
   ssl: connectionString.includes("supabase") ? { rejectUnauthorized: false } : undefined,
 });
-export const db = drizzle(pool, { schema });
+
+// ⚠️ Added `{ prepare: false }` for Supabase Transaction Pooler compatibility
+export const db = drizzle(pool, { schema, prepare: false });
 
 export * from "./schema";
