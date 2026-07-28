@@ -12,7 +12,6 @@ const router = Router();
 
 router.get("/", async (req, res): Promise<void> => {
   try {
-    // Single optimized query with standard Drizzle aggregation (No N+1 query loop, no broken driver properties)
     const categoriesWithCounts = await db
       .select({
         id: categoriesTable.id,
@@ -25,7 +24,14 @@ router.get("/", async (req, res): Promise<void> => {
       })
       .from(categoriesTable)
       .leftJoin(productsTable, eq(categoriesTable.id, productsTable.categoryId))
-      .groupBy(categoriesTable.id)
+      .groupBy(
+        categoriesTable.id,
+        categoriesTable.name,
+        categoriesTable.slug,
+        categoriesTable.parentId,
+        categoriesTable.sizes,
+        categoriesTable.createdAt
+      )
       .orderBy(categoriesTable.name);
 
     const formatted = categoriesWithCounts.map((cat) => ({
@@ -37,7 +43,6 @@ router.get("/", async (req, res): Promise<void> => {
   } catch (err: any) {
     req.log?.error?.({ err }, "Failed to list categories");
     
-    // Detailed error payload for immediate diagnosis
     res.status(500).json({
       error: "Internal server error",
       message: err?.message || String(err),
@@ -127,7 +132,6 @@ router.put("/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    // Get count safely for updated category
     const [countRow] = await db
       .select({
         count: sql<number>`CAST(COUNT(*) AS INTEGER)`,
