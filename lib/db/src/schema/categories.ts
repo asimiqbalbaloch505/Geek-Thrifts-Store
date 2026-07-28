@@ -1,6 +1,6 @@
-import { pgTable, serial, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer, AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const categoriesTable = pgTable("categories", {
   id: serial("id").primaryKey(),
@@ -8,7 +8,8 @@ export const categoriesTable = pgTable("categories", {
   slug: text("slug").notNull().unique(),
   description: text("description"),
   imageUrl: text("image_url"),
-  parentId: integer("parent_id").references(() => categoriesTable.id, { onDelete: "cascade" }), // 👈 Subcategory link
+  // 👈 Fix: AnyPgColumn type casting adds explicit type to prevent TS circular error
+  parentId: integer("parent_id").references((): AnyPgColumn => categoriesTable.id, { onDelete: "cascade" }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
