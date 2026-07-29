@@ -17,8 +17,11 @@ router.get("/", async (req, res): Promise<void> => {
         id: categoriesTable.id,
         name: categoriesTable.name,
         slug: categoriesTable.slug,
+        description: categoriesTable.description,
+        imageUrl: categoriesTable.imageUrl,
         parentId: categoriesTable.parentId,
         sizes: categoriesTable.sizes,
+        isActive: categoriesTable.isActive, // ✅ ADDED: Select isActive
         createdAt: categoriesTable.createdAt,
         productCount: sql<number>`CAST(COUNT(CASE WHEN ${productsTable.isActive} = true THEN 1 END) AS INTEGER)`,
       })
@@ -28,8 +31,11 @@ router.get("/", async (req, res): Promise<void> => {
         categoriesTable.id,
         categoriesTable.name,
         categoriesTable.slug,
+        categoriesTable.description,
+        categoriesTable.imageUrl,
         categoriesTable.parentId,
         categoriesTable.sizes,
+        categoriesTable.isActive, // ✅ ADDED: Include isActive in GroupBy
         categoriesTable.createdAt
       )
       .orderBy(categoriesTable.name);
@@ -42,7 +48,7 @@ router.get("/", async (req, res): Promise<void> => {
     res.json(formatted);
   } catch (err: any) {
     req.log?.error?.({ err }, "Failed to list categories");
-    
+
     res.status(500).json({
       error: "Internal server error",
       message: err?.message || String(err),
@@ -71,6 +77,7 @@ router.post("/", async (req, res): Promise<void> => {
       sizes: Array.isArray(req.body.sizes)
         ? req.body.sizes
         : (parsed.data as any).sizes ?? [],
+      isActive: req.body.isActive !== undefined ? Boolean(req.body.isActive) : true, // ✅ Ensures isActive defaults to true on creation
     };
 
     const [category] = await db
@@ -119,6 +126,10 @@ router.put("/:id", async (req, res): Promise<void> => {
       updatePayload.sizes = Array.isArray(req.body.sizes)
         ? req.body.sizes
         : [];
+    }
+
+    if ("isActive" in req.body) {
+      updatePayload.isActive = Boolean(req.body.isActive); // ✅ Supports toggling active status in PUT endpoint
     }
 
     const [updated] = await db
