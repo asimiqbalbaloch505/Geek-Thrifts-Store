@@ -1,52 +1,64 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
-type AuthContextType = {
-  token: string | null;
-  login: (token: string) => void;
-  logout: () => void;
-  isAuthenticated: boolean;
+type UserProfile = {
+  id: number;
+  name: string;
+  email: string;
+  createdAt: string;
 };
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+type UserAuthContextType = {
+  userToken: string | null;
+  user: UserProfile | null;
+  userLogin: (token: string, user: UserProfile) => void;
+  userLogout: () => void;
+  isUserLoggedIn: boolean;
+};
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  // STRICTLY look for adminToken, isolated from userToken / regular token
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem("adminToken");
+const UserAuthContext = createContext<UserAuthContextType | undefined>(undefined);
+
+export function UserAuthProvider({ children }: { children: ReactNode }) {
+  const [userToken, setUserToken] = useState<string | null>(() => {
+    return localStorage.getItem("userToken");
+  });
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    const stored = localStorage.getItem("userProfile");
+    if (stored) {
+      try { return JSON.parse(stored); } catch { return null; }
+    }
+    return null;
   });
 
   useEffect(() => {
-    if (token) {
-      localStorage.setItem("adminToken", token);
+    if (userToken && user) {
+      localStorage.setItem("userToken", userToken);
+      localStorage.setItem("userProfile", JSON.stringify(user));
     } else {
-      localStorage.removeItem("adminToken");
+      localStorage.removeItem("userToken");
+      localStorage.removeItem("userProfile");
     }
-  }, [token]);
+  }, [userToken, user]);
 
-  const login = (newToken: string) => setToken(newToken);
-  const logout = () => {
-    setToken(null);
-    localStorage.removeItem("adminToken");
+  const userLogin = (token: string, profile: UserProfile) => {
+    setUserToken(token);
+    setUser(profile);
+  };
+
+  const userLogout = () => {
+    setUserToken(null);
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        token,
-        login,
-        logout,
-        isAuthenticated: !!token,
-      }}
-    >
+    <UserAuthContext.Provider value={{ userToken, user, userLogin, userLogout, isUserLoggedIn: !!userToken }}>
       {children}
-    </AuthContext.Provider>
+    </UserAuthContext.Provider>
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+// Ensure this hook is explicitly exported as a named export
+export function useUserAuth() {
+  const context = useContext(UserAuthContext);
+  if (!context) throw new Error("useUserAuth must be used within UserAuthProvider");
   return context;
 }
