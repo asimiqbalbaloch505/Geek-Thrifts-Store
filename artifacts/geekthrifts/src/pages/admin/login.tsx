@@ -29,10 +29,10 @@ export default function AdminLogin() {
   const { toast } = useToast();
   const adminLogin = useAdminLogin();
 
-  const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "asimiqbalbaloch505@gmail.com", password: "Asim@39794" },
-  });
+ const form = useForm<LoginValues>({
+  resolver: zodResolver(loginSchema),
+  defaultValues: { email: "", password: "" },
+});
 
   useEffect(() => {
     if (isAuthenticated) setLocation("/admin/dashboard");

@@ -1,13 +1,12 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { db, usersTable } from "@workspace/db";
+import { sql, eq } from "drizzle-orm";
 import { AdminLoginBody } from "@workspace/api-zod";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 const router = Router();
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@geekthrifts.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "geekthrifts2024";
 const JWT_SECRET = process.env.JWT_SECRET ?? "geekthrifts-fallback-secret";
 
 router.post("/login", async (req, res): Promise<void> => {
@@ -17,11 +16,45 @@ router.post("/login", async (req, res): Promise<void> => {
     return;
   }
   const { email, password } = parsed.data;
-  if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
-    const token = jwt.sign({ role: "admin", email }, JWT_SECRET, { expiresIn: "7d" });
+
+  try {
+    // 1. Fetch user by email from database
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email.toLowerCase()))
+      .limit(1);
+
+    if (!user) {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
+
+    // 2. Check if the user has the 'admin' role in the database
+    // (Note: ensure usersTable in @workspace/db has the role field, or cast user as any if schema isn't updated in TS yet)
+    if ((user as any).role !== "admin") {
+      res.status(403).json({ error: "Access denied. Admin privileges required." });
+      return;
+    }
+
+    // 3. Verify password against hashed password in database
+    const validPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!validPassword) {
+      res.status(401).json({ error: "Invalid credentials" });
+      return;
+    }
+
+    // 4. Issue JWT Admin Token
+    const token = jwt.sign(
+      { id: user.id, role: "admin", email: user.email },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     res.json({ success: true, token });
-  } else {
-    res.status(401).json({ error: "Invalid credentials" });
+  } catch (err) {
+    req.log.error({ err }, "Failed to perform admin login");
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
