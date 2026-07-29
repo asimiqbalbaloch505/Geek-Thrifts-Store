@@ -31,6 +31,7 @@ async function buildAll() {
       "pg-native",
       "@workspace/db",
       "@workspace/api-zod",
+      "./schema",
       "*.node",
       "sharp",
       "better-sqlite3",
