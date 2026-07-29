@@ -3,6 +3,7 @@ import { useGetAdminStats, getGetAdminStatsQueryKey } from "@workspace/api-clien
 import { formatPKR } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import { 
   ShoppingBag, 
   PackageOpen, 
@@ -15,9 +16,22 @@ import {
 } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { data: stats, isLoading } = useGetAdminStats({
-    query: { queryKey: getGetAdminStatsQueryKey() }
-  });
+  const { token } = useAuth();
+  const authToken = token || localStorage.getItem("adminToken") || localStorage.getItem("token");
+
+  const { data: stats, isLoading } = useGetAdminStats(
+    {
+      headers: {
+        Authorization: authToken ? `Bearer ${authToken}` : "",
+      },
+    },
+    {
+      query: { 
+        queryKey: getGetAdminStatsQueryKey(),
+        enabled: !!authToken, // Only run query when token exists
+      },
+    }
+  );
 
   const statCards = [
     { label: "Total Revenue", value: stats ? formatPKR(stats.totalRevenue) : null, icon: Banknote, span: true },
