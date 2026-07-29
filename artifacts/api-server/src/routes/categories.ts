@@ -66,18 +66,26 @@ router.post("/", async (req, res): Promise<void> => {
   }
 
   try {
+    // Generate a fallback slug if missing or empty
+    const slug =
+      parsed.data.slug && parsed.data.slug.trim() !== ""
+        ? parsed.data.slug.trim().toLowerCase().replace(/\s+/g, "-")
+        : parsed.data.name.trim().toLowerCase().replace(/\s+/g, "-");
+
+    // Strictly construct the database insert object (prevents extra payload fields from breaking Postgres)
     const insertData = {
-      ...parsed.data,
+      name: parsed.data.name,
+      slug,
+      description: parsed.data.description ?? null,
+      imageUrl: (parsed.data as any).imageUrl ?? null,
       parentId:
-        req.body.parentId !== undefined
-          ? req.body.parentId
-            ? Number(req.body.parentId)
-            : null
+        req.body.parentId !== undefined && req.body.parentId !== null
+          ? Number(req.body.parentId) || null
           : null,
       sizes: Array.isArray(req.body.sizes)
         ? req.body.sizes
         : (parsed.data as any).sizes ?? [],
-      isActive: req.body.isActive !== undefined ? Boolean(req.body.isActive) : true, // ✅ Ensures isActive defaults to true on creation
+      isActive: req.body.isActive !== undefined ? Boolean(req.body.isActive) : true,
     };
 
     const [category] = await db
@@ -95,6 +103,7 @@ router.post("/", async (req, res): Promise<void> => {
     res.status(500).json({
       error: "Failed to create category",
       message: err?.message || String(err),
+      detail: err?.detail,
     });
   }
 });
