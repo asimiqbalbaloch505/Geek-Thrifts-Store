@@ -3,9 +3,8 @@
   "compilerOptions": {
     "composite": false,
     "declaration": false,
-    "declarationMap": false,
-    "emitDeclarationOnly": false,
     "noEmit": true,
+    "skipLibCheck": true,
     "outDir": "dist",
     "rootDir": "src",
     "types": ["node"]

@@ -1,16 +1,8 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist",
-    "types": ["node"]
+    "noEmit": true,
+    "skipLibCheck": true
   },
-  "include": ["src", "api"],
-  "references": [
-    {
-      "path": "../../lib/db"
-    },
-    {
-      "path": "../../lib/api-zod"
-    }
-  ]
+  "include": ["src/**/*"]
 }
