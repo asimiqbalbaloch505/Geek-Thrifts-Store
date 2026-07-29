@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { db, usersTable } from "@workspace/db";
 import { sql, eq } from "drizzle-orm";
 import { AdminLoginBody } from "@workspace/api-zod";
@@ -9,7 +9,35 @@ const router = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "geekthrifts-fallback-secret";
 
-router.post("/login", async (req, res): Promise<void> => {
+/**
+ * Middleware: Verifies that the request contains a valid JWT token
+ * and that the token payload explicitly has role: "admin"
+ */
+function requireAdmin(req: Request, res: Response, next: NextFunction): void {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Unauthorized access" });
+    return;
+  }
+
+  const token = authHeader.slice(7);
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as { role?: string; id?: number; email?: string };
+    if (payload.role !== "admin") {
+      res.status(403).json({ error: "Forbidden: Admin access required" });
+      return;
+    }
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid or expired session token" });
+    return;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// POST /login - Admin Login Endpoint
+// -----------------------------------------------------------------------------
+router.post("/login", async (req: Request, res: Response): Promise<void> => {
   const parsed = AdminLoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -31,7 +59,6 @@ router.post("/login", async (req, res): Promise<void> => {
     }
 
     // 2. Check if the user has the 'admin' role in the database
-    // (Note: ensure usersTable in @workspace/db has the role field, or cast user as any if schema isn't updated in TS yet)
     if ((user as any).role !== "admin") {
       res.status(403).json({ error: "Access denied. Admin privileges required." });
       return;
@@ -53,12 +80,15 @@ router.post("/login", async (req, res): Promise<void> => {
 
     res.json({ success: true, token });
   } catch (err) {
-    req.log.error({ err }, "Failed to perform admin login");
+    (req as any).log?.error?.({ err }, "Failed to perform admin login");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.get("/stats", async (req, res): Promise<void> => {
+// -----------------------------------------------------------------------------
+// GET /stats - Fetch Store Statistics (Protected Route)
+// -----------------------------------------------------------------------------
+router.get("/stats", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const ordersResult = await db.execute(sql`
       SELECT 
@@ -94,7 +124,7 @@ router.get("/stats", async (req, res): Promise<void> => {
       totalCategories: Number((categoriesResult.rows[0] as { count: string }).count),
     });
   } catch (err) {
-    req.log.error({ err }, "Failed to get admin stats");
+    (req as any).log?.error?.({ err }, "Failed to get admin stats");
     res.status(500).json({ error: "Internal server error" });
   }
 });
