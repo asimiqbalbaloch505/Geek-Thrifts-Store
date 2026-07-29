@@ -8,7 +8,7 @@ import { UserAuthProvider } from "@/hooks/use-user-auth";
 
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import Products from "@/pages/products";
+import Products from "@/pages/products"; // Ensure this is the customer store catalog
 import ProductDetail from "@/pages/product-detail";
 import Cart from "@/pages/cart";
 import Checkout from "@/pages/checkout";
@@ -17,7 +17,7 @@ import SignupPage from "@/pages/signup";
 import AdminLogin from "@/pages/admin/login";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminOrders from "@/pages/admin/orders";
-import AdminProducts from "@/pages/admin/products";
+import AdminProducts from "@/pages/admin/products"; // Ensure this handles the admin dashboard
 import AdminCategories from "@/pages/admin/categories";
 import OrderStatus from "@/pages/order-status";
 import Shipping from "@/pages/shipping";
