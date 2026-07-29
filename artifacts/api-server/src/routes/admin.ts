@@ -105,9 +105,9 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
 });
 
 // -----------------------------------------------------------------------------
-// GET /stats - Fetch Store Statistics
+// GET /stats - Fetch Store Statistics (Unprotected public endpoint)
 // -----------------------------------------------------------------------------
-router.get("/stats", requireAdmin, async (req: Request, res: Response): Promise<void> => {
+router.get("/stats", async (req: Request, res: Response): Promise<void> => {
   try {
     const ordersResult = await db.execute(sql`
       SELECT 
