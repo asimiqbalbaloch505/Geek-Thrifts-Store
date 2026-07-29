@@ -1,10 +1,12 @@
-import { useListProducts, useListCategories, Product } from "@workspace/api-client-react";
+import { useListProducts, useListCategories, Product, Category } from "@workspace/api-client-react";
 import { formatPKR, getImageUrl } from "@/lib/utils";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Layout } from "@/components/layout";
 
 export default function CustomerProductsPage() {
-  const searchParams = new URLSearchParams(window.location.search);
+  // useSearch hook forces React to re-render when query params change in Wouter
+  const searchString = useSearch();
+  const searchParams = new URLSearchParams(searchString);
   const selectedCategorySlug = searchParams.get("category");
 
   const { data: products, isLoading: loadingProducts } = useListProducts();
@@ -12,11 +14,20 @@ export default function CustomerProductsPage() {
 
   const activeCategory = categories?.find((c) => c.slug === selectedCategorySlug);
 
+  // Get active category ID and all its subcategory IDs (if any)
+  const matchingCategoryIds = new Set<number>();
+  if (activeCategory) {
+    matchingCategoryIds.add(activeCategory.id);
+    // Include child categories if the user clicked a parent category
+    categories
+      ?.filter((c) => c.parentId === activeCategory.id)
+      .forEach((child) => matchingCategoryIds.add(child.id));
+  }
+
   const filteredProducts = (products ?? []).filter((product) => {
     if (!product.isActive) return false;
     if (!selectedCategorySlug) return true;
-    if (activeCategory && product.categoryId === activeCategory.id) return true;
-    return false;
+    return matchingCategoryIds.has(product.categoryId);
   });
 
   return (
