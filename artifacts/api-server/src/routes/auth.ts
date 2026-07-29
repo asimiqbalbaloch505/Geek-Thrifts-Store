@@ -1,18 +1,14 @@
 import { Router } from "express";
-
-const router = Router();
-import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
+import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { SignupBody, LoginBody } from "@workspace/api-zod";
 
-
-
+const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? "geekthrifts-fallback-secret";
 
-function signToken(payload: { id: number; email: string; name: string }) {
+function signToken(payload: { id: number; email: string; name: string; role: string }) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });
 }
 
@@ -23,28 +19,39 @@ router.post("/signup", async (req, res): Promise<void> => {
     return;
   }
   const { name, email, password } = parsed.data;
+  const cleanEmail = email.trim().toLowerCase();
 
   try {
-    const existing = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
+    const existing = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, cleanEmail))
+      .limit(1);
+
     if (existing.length > 0) {
       res.status(409).json({ error: "An account with this email already exists" });
       return;
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const [user] = await db.insert(usersTable).values({
-      name,
-      email: email.toLowerCase(),
-      passwordHash,
-    }).returning();
+    const [user] = await db
+      .insert(usersTable)
+      .values({
+        name,
+        email: cleanEmail,
+        passwordHash,
+        role: "customer", // Default role
+      })
+      .returning();
 
-    const token = signToken({ id: user.id, email: user.email, name: user.name });
+    const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
     res.status(201).json({
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
         createdAt: user.createdAt.toISOString(),
       },
     });
@@ -61,9 +68,15 @@ router.post("/login", async (req, res): Promise<void> => {
     return;
   }
   const { email, password } = parsed.data;
+  const cleanEmail = email.trim().toLowerCase();
 
   try {
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, cleanEmail))
+      .limit(1);
+
     if (!user) {
       res.status(401).json({ error: "Invalid email or password" });
       return;
@@ -75,13 +88,14 @@ router.post("/login", async (req, res): Promise<void> => {
       return;
     }
 
-    const token = signToken({ id: user.id, email: user.email, name: user.name });
+    const token = signToken({ id: user.id, email: user.email, name: user.name, role: user.role });
     res.json({
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
         createdAt: user.createdAt.toISOString(),
       },
     });
@@ -99,7 +113,7 @@ router.get("/me", async (req, res): Promise<void> => {
   }
   const token = authHeader.slice(7);
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { id: number; email: string; name: string };
+    const payload = jwt.verify(token, JWT_SECRET) as { id: number; email: string; name: string; role: string };
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, payload.id)).limit(1);
     if (!user) {
       res.status(401).json({ error: "User not found" });
@@ -109,6 +123,7 @@ router.get("/me", async (req, res): Promise<void> => {
       id: user.id,
       name: user.name,
       email: user.email,
+      role: user.role,
       createdAt: user.createdAt.toISOString(),
     });
   } catch {

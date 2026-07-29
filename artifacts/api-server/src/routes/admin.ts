@@ -6,7 +6,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 const router = Router();
-
 const JWT_SECRET = process.env.JWT_SECRET ?? "geekthrifts-fallback-secret";
 
 /**
@@ -44,13 +43,14 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
     return;
   }
   const { email, password } = parsed.data;
+  const cleanEmail = email.trim().toLowerCase();
 
   try {
-    // 1. Fetch user by email from database
+    // 1. Safe Parameterized DB Query (SQL Injection Protected)
     const [user] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.email, email.toLowerCase()))
+      .where(eq(usersTable.email, cleanEmail))
       .limit(1);
 
     if (!user) {
@@ -58,22 +58,22 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // 2. Check if the user has the 'admin' role in the database
-    if ((user as any).role !== "admin") {
+    // 2. Role Check from Database
+    if (user.role !== "admin") {
       res.status(403).json({ error: "Access denied. Admin privileges required." });
       return;
     }
 
-    // 3. Verify password against hashed password in database
+    // 3. Constant-Time Bcrypt Comparison
     const validPassword = await bcrypt.compare(password, user.passwordHash);
     if (!validPassword) {
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
-    // 4. Issue JWT Admin Token
+    // 4. Issue Admin JWT
     const token = jwt.sign(
-      { id: user.id, role: "admin", email: user.email },
+      { id: user.id, role: user.role, email: user.email, name: user.name },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -88,7 +88,7 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
 // -----------------------------------------------------------------------------
 // GET /stats - Fetch Store Statistics
 // -----------------------------------------------------------------------------
-router.get("/stats", async (req: Request, res: Response): Promise<void> => {
+router.get("/stats", requireAdmin, async (req: Request, res: Response): Promise<void> => {
   try {
     const ordersResult = await db.execute(sql`
       SELECT 
