@@ -1,5 +1,8 @@
 {
-  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile && pnpm run typecheck:libs && pnpm --filter @workspace/geekthrifts run build",
+  "framework": null,
+  "buildCommand": "cd ../.. && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/geekthrifts run build",
   "outputDirectory": "dist/public",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
