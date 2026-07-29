@@ -25,12 +25,11 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
-    // ⚡ CRITICAL FIX: 'pg' aur workspace monorepo dependencies ko externalize kiya gaya hai
+    // ⚡ Internal monorepo packages (@workspace/*) are now bundled inline.
+    // Native modules and heavy optional binaries remain external.
     external: [
       "pg",
       "pg-native",
-      "@workspace/db",
-      "@workspace/api-zod",
       "./schema",
       "*.node",
       "sharp",
