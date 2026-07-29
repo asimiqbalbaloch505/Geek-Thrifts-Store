@@ -1,63 +1,52 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
-type UserProfile = {
-  id: number;
-  name: string;
-  email: string;
-  createdAt: string;
+type AuthContextType = {
+  token: string | null;
+  login: (token: string) => void;
+  logout: () => void;
+  isAuthenticated: boolean;
 };
 
-type UserAuthContextType = {
-  userToken: string | null;
-  user: UserProfile | null;
-  userLogin: (token: string, user: UserProfile) => void;
-  userLogout: () => void;
-  isUserLoggedIn: boolean;
-};
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const UserAuthContext = createContext<UserAuthContextType | undefined>(undefined);
-
-export function UserAuthProvider({ children }: { children: ReactNode }) {
-  const [userToken, setUserToken] = useState<string | null>(() => {
-    return localStorage.getItem("userToken");
-  });
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    const stored = localStorage.getItem("userProfile");
-    if (stored) {
-      try { return JSON.parse(stored); } catch { return null; }
-    }
-    return null;
+export function AuthProvider({ children }: { children: ReactNode }) {
+  // STRICTLY look for adminToken, isolated from userToken / regular token
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem("adminToken");
   });
 
   useEffect(() => {
-    if (userToken && user) {
-      localStorage.setItem("userToken", userToken);
-      localStorage.setItem("userProfile", JSON.stringify(user));
+    if (token) {
+      localStorage.setItem("adminToken", token);
     } else {
-      localStorage.removeItem("userToken");
-      localStorage.removeItem("userProfile");
+      localStorage.removeItem("adminToken");
     }
-  }, [userToken, user]);
+  }, [token]);
 
-  const userLogin = (token: string, profile: UserProfile) => {
-    setUserToken(token);
-    setUser(profile);
-  };
-
-  const userLogout = () => {
-    setUserToken(null);
-    setUser(null);
+  const login = (newToken: string) => setToken(newToken);
+  const logout = () => {
+    setToken(null);
+    localStorage.removeItem("adminToken");
   };
 
   return (
-    <UserAuthContext.Provider value={{ userToken, user, userLogin, userLogout, isUserLoggedIn: !!userToken }}>
+    <AuthContext.Provider
+      value={{
+        token,
+        login,
+        logout,
+        isAuthenticated: !!token,
+      }}
+    >
       {children}
-    </UserAuthContext.Provider>
+    </AuthContext.Provider>
   );
 }
 
-export function useUserAuth() {
-  const context = useContext(UserAuthContext);
-  if (!context) throw new Error("useUserAuth must be used within UserAuthProvider");
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
   return context;
 }
