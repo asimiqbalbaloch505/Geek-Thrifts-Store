@@ -4,17 +4,18 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
+// Environment variable prioritize hoga, warna direct Supabase connection URL fallback ke taur par chalega
 const connectionString =
   process.env.DATABASE_URL ||
-  "postgresql://postgres.tzremfxsabivlumuezgd:GeekThriftsPass2026%21@aws-1-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=verify-full";
+  "postgresql://postgres:GeekThriftsPass2026!@db.tzremfxsabivlumuezgd.supabase.co:5432/postgres";
 
 export const pool = new Pool({
   connectionString,
-  max: 1, // Crucial for Vercel serverless functions
+  max: 1, // Vercel serverless functions ke liye best connection limit
   idleTimeoutMillis: 3000,
   connectionTimeoutMillis: 5000,
   ssl: {
-    rejectUnauthorized: false, // Prevents SSL certificate validation crashes in Vercel
+    rejectUnauthorized: false, // Vercel ke serverless environment mein SSL crash hone se bachata hai
   },
 });
 
