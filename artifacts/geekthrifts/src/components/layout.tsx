@@ -3,7 +3,7 @@ import logoImg from "@assets/WhatsApp_Image_2026-06-19_at_21.50.52_1781941051375
 import { useCart } from "@/hooks/use-cart";
 import { useUserAuth } from "@/hooks/use-user-auth";
 import { useListCategories, getListCategoriesQueryKey } from "@workspace/api-client-react";
-import { Menu, X, ShoppingBag, User, LogOut, ChevronDown } from "lucide-react";
+import { Menu, X, ShoppingBag, User, LogOut, ChevronDown, UserPlus, LogIn } from "lucide-react";
 import { useState, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -122,7 +122,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { isUserLoggedIn, user, userLogout } = useUserAuth();
   const [location] = useLocation();
 
-  // 🔄 Fetch Live Categories from Database
+  // Fetch Live Categories from Database
   const { data: allCategories } = useListCategories({
     query: { queryKey: getListCategoriesQueryKey() }
   });
@@ -282,6 +282,50 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </AnimatePresence>
                   </div>
                 ))}
+
+                {/* Mobile Auth / Account Section */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  {isUserLoggedIn && user ? (
+                    <div className="bg-gray-50 p-3.5 rounded-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <User className="w-4 h-4 text-gray-600" />
+                        <div>
+                          <p className="text-[13px] font-semibold text-gray-900 leading-tight">{user.name}</p>
+                          <p className="text-[11px] text-gray-500 truncate">{user.email}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          userLogout();
+                          setMobileOpen(false);
+                        }}
+                        className="w-full mt-2 flex items-center justify-center gap-2 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors rounded-none"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        Sign Out
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href="/login"
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center justify-center gap-1.5 py-2.5 border border-gray-900 text-gray-900 text-[11px] font-semibold uppercase tracking-[0.12em] hover:bg-gray-900 hover:text-white transition-colors"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        Sign In
+                      </Link>
+                      <Link
+                        href="/signup"
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center justify-center gap-1.5 py-2.5 bg-gray-900 text-white text-[11px] font-semibold uppercase tracking-[0.12em] hover:bg-gray-800 transition-colors"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        Join
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}

@@ -34,7 +34,13 @@ export default function SignupPage() {
   }, [isUserLoggedIn, setLocation]);
 
   const onSubmit = (values: SignupValues) => {
-    signupMutation.mutate({ data: { name: values.name, email: values.email, password: values.password } }, {
+    const payload = {
+      name: values.name.trim(),
+      email: values.email.toLowerCase().trim(),
+      password: values.password.trim(),
+    };
+
+    signupMutation.mutate({ data: payload }, {
       onSuccess: (data) => {
         userLogin(data.token, data.user);
         toast({ title: "Account created!", description: `Welcome to GeekThrifts, ${data.user.name}.` });
@@ -76,6 +82,8 @@ export default function SignupPage() {
               <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-700 mb-1.5">Email</label>
               <input
                 type="email"
+                autoCapitalize="none"
+                autoCorrect="off"
                 autoComplete="email"
                 placeholder="you@example.com"
                 className="w-full h-11 px-4 border border-gray-200 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"

@@ -29,7 +29,13 @@ export default function LoginPage() {
   }, [isUserLoggedIn, setLocation]);
 
   const onSubmit = (values: LoginValues) => {
-    loginMutation.mutate({ data: values }, {
+    // Normalize email input to lowercase and trim spaces for mobile keyboards
+    const normalizedData = {
+      email: values.email.toLowerCase().trim(),
+      password: values.password.trim(),
+    };
+
+    loginMutation.mutate({ data: normalizedData }, {
       onSuccess: (data) => {
         userLogin(data.token, data.user);
         toast({ title: "Welcome back!", description: `Good to see you, ${data.user.name}.` });
@@ -57,6 +63,8 @@ export default function LoginPage() {
               <label className="block text-[12px] font-semibold uppercase tracking-[0.08em] text-gray-700 mb-1.5">Email</label>
               <input
                 type="email"
+                autoCapitalize="none"
+                autoCorrect="off"
                 autoComplete="email"
                 placeholder="you@example.com"
                 className="w-full h-11 px-4 border border-gray-200 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
