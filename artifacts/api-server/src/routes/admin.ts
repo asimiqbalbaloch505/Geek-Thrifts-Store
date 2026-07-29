@@ -8,26 +8,45 @@ import jwt from "jsonwebtoken";
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET ?? "geekthrifts-fallback-secret";
 
+interface AdminJwtPayload {
+  id: number;
+  email: string;
+  role: string;
+  name?: string;
+}
+
 /**
  * Middleware: Verifies that the request contains a valid JWT token
  * and that the token payload explicitly has role: "admin"
  */
 function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
+  const authHeader = req.headers.authorization || (req.headers.Authorization as string);
+
   if (!authHeader?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Unauthorized access" });
+    (req as any).log?.warn?.("Admin Auth Failed: Missing or malformed Bearer token");
+    res.status(401).json({ error: "Unauthorized access: Missing token" });
     return;
   }
 
-  const token = authHeader.slice(7);
+  const token = authHeader.slice(7).trim();
+
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { role?: string; id?: number; email?: string };
+    const payload = jwt.verify(token, JWT_SECRET) as AdminJwtPayload;
+
     if (payload.role !== "admin") {
+      (req as any).log?.warn?.(
+        { userId: payload.id, role: payload.role },
+        "Admin Auth Failed: User lacks admin role"
+      );
       res.status(403).json({ error: "Forbidden: Admin access required" });
       return;
     }
+
+    // Attach user payload to request for downstream handlers
+    (req as any).user = payload;
     next();
-  } catch {
+  } catch (err) {
+    (req as any).log?.warn?.({ err }, "Admin Auth Failed: Invalid or expired token");
     res.status(401).json({ error: "Invalid or expired session token" });
     return;
   }

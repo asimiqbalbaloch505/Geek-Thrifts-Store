@@ -11,14 +11,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem("adminToken");
+    return localStorage.getItem("adminToken") || localStorage.getItem("token");
   });
 
   useEffect(() => {
     if (token) {
       localStorage.setItem("adminToken", token);
+      localStorage.setItem("token", token); // Sync with API client expected key
     } else {
       localStorage.removeItem("adminToken");
+      localStorage.removeItem("token");
     }
   }, [token]);
 
