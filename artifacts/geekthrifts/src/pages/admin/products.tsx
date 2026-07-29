@@ -7,6 +7,8 @@ import {
   useDeleteProduct,
   getListProductsQueryKey,
   getListCategoriesQueryKey,
+  Product,
+  Category,
 } from "@workspace/api-client-react";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -15,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { supabase } from "@/lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -40,34 +43,9 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2, Upload, Link as LinkIcon, Loader2 } from "lucide-react";
 
-// Local Type Extensions to maintain workspace compatibility
 type SizeInventoryItem = { size: string; qty: number };
-
-type LocalCategory = {
-  id: number;
-  name: string;
-  slug: string;
-  parentId?: number | null;
-  sizes?: string[];
-  isActive?: boolean;
-};
-
-type LocalProduct = {
-  id: number;
-  name: string;
-  description?: string | null;
-  price: number;
-  imageUrl?: string | null;
-  categoryId: number;
-  categoryName?: string;
-  sizes?: string[];
-  sizeInventory?: SizeInventoryItem[];
-  stock: number;
-  isActive: boolean;
-  isFeatured: boolean;
-};
 
 const sizeInventoryItemSchema = z.object({
   size: z.string(),
@@ -78,7 +56,7 @@ const productSchema = z.object({
   name: z.string().min(2, "Name is required"),
   description: z.string().optional(),
   price: z.coerce.number().min(1, "Price must be greater than 0"),
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().min(1, "Product image is required"),
   categoryId: z.coerce.number().min(1, "Category is required"),
   sizes: z.array(z.string()),
   sizeInventory: z.array(sizeInventoryItemSchema),
@@ -92,7 +70,12 @@ type ProductValues = z.infer<typeof productSchema>;
 export default function AdminProducts() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<LocalProduct | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Image handling state
+  const [imageMode, setImageMode] = useState<"upload" | "url">("upload");
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const { data: products, isLoading } = useListProducts(undefined, {
     query: { queryKey: getListProductsQueryKey() },
@@ -105,9 +88,6 @@ export default function AdminProducts() {
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
-
-  const typedCategories = (categories as LocalCategory[]) || [];
-  const typedProducts = (products as LocalProduct[]) || [];
 
   const form = useForm<ProductValues>({
     resolver: zodResolver(productSchema),
@@ -127,19 +107,17 @@ export default function AdminProducts() {
 
   const watchedCategoryId = useWatch({ control: form.control, name: "categoryId" });
   const watchedSizeInventory = useWatch({ control: form.control, name: "sizeInventory" });
+  const watchedImageUrl = useWatch({ control: form.control, name: "imageUrl" });
 
-  // Dynamic helper to determine available sizes with parent category fallback
-  const getAvailableSizesForCategory = (catId: number, catList: LocalCategory[]): string[] => {
-    if (!catId || !catList.length) return [];
+  const getAvailableSizesForCategory = (catId: number, catList?: Category[]): string[] => {
+    if (!catId || !catList) return [];
     const category = catList.find((c) => c.id === catId);
     if (!category) return [];
 
-    // If subcategory has own sizes, return them
     if (category.sizes && category.sizes.length > 0) {
       return category.sizes;
     }
 
-    // Otherwise inherit parent category sizes
     if (category.parentId) {
       const parent = catList.find((p) => p.id === category.parentId);
       if (parent?.sizes && parent.sizes.length > 0) {
@@ -150,7 +128,7 @@ export default function AdminProducts() {
     return [];
   };
 
-  const availableSizes = getAvailableSizesForCategory(Number(watchedCategoryId), typedCategories);
+  const availableSizes = getAvailableSizesForCategory(Number(watchedCategoryId), categories);
   const hasSizes = availableSizes.length > 0;
 
   useEffect(() => {
@@ -162,12 +140,14 @@ export default function AdminProducts() {
 
   const openAddDialog = () => {
     setEditingProduct(null);
+    setUploadError(null);
+    setImageMode("upload");
     form.reset({
       name: "",
       description: "",
       price: 0,
       imageUrl: "",
-      categoryId: typedCategories?.[0]?.id || 0,
+      categoryId: categories?.[0]?.id || 0,
       sizes: [],
       sizeInventory: [],
       stock: 0,
@@ -177,8 +157,10 @@ export default function AdminProducts() {
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (product: LocalProduct) => {
+  const openEditDialog = (product: Product) => {
     setEditingProduct(product);
+    setUploadError(null);
+    setImageMode(product.imageUrl ? "url" : "upload");
     const inv = (product.sizeInventory ?? []) as SizeInventoryItem[];
     form.reset({
       name: product.name,
@@ -193,6 +175,37 @@ export default function AdminProducts() {
       isFeatured: product.isFeatured,
     });
     setIsDialogOpen(true);
+  };
+
+  // Upload image to Supabase Bucket
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from("product-images")
+        .upload(filePath, file);
+
+      if (uploadErr) throw uploadErr;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(filePath);
+
+      form.setValue("imageUrl", publicUrl, { shouldValidate: true });
+    } catch (err: any) {
+      setUploadError(err?.message || "Failed to upload image.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDelete = (id: number) => {
@@ -259,15 +272,14 @@ export default function AdminProducts() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {isLoading ? (
           <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">Loading...</div>
-        ) : typedProducts.length === 0 ? (
+        ) : !products || products.length === 0 ? (
           <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">No products found</div>
         ) : (
-          typedProducts.map((product) => {
+          products.map((product) => {
             const inv = (product.sizeInventory ?? []) as SizeInventoryItem[];
             const displaySizes = inv.length > 0
               ? inv.map((s) => `${s.size}(${s.qty})`).join(", ")
               : product.stock > 0 ? `Qty: ${product.stock}` : "Out of Stock";
-
             return (
               <div key={product.id} className="border border-border bg-card flex flex-col group">
                 <div className="aspect-[4/3] bg-muted border-b border-border relative">
@@ -360,8 +372,8 @@ export default function AdminProducts() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-none">
-                              {typedCategories.map((cat) => {
-                                const parentCat = cat.parentId ? typedCategories.find((p) => p.id === cat.parentId) : null;
+                              {categories?.map((cat) => {
+                                const parentCat = cat.parentId ? categories.find((p) => p.id === cat.parentId) : null;
                                 const label = parentCat ? `${parentCat.name} / ${cat.name}` : cat.name;
 
                                 return (
@@ -441,15 +453,74 @@ export default function AdminProducts() {
                   )}
                 </div>
 
-                {/* Right Column */}
+                {/* Right Column - Image & Meta */}
                 <div className="space-y-5">
                   <FormField
                     control={form.control}
                     name="imageUrl"
-                    render={({ field }) => (
+                    render={() => (
                       <FormItem>
-                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Image URL</FormLabel>
-                        <FormControl><Input className="rounded-none border-border text-xs" placeholder="https://..." {...field}/></FormControl>
+                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Image</FormLabel>
+                        
+                        <div className="flex gap-2 mb-2">
+                          <Button
+                            type="button"
+                            variant={imageMode === "upload" ? "default" : "outline"}
+                            size="sm"
+                            className="rounded-none text-[10px] uppercase tracking-widest h-8"
+                            onClick={() => setImageMode("upload")}
+                          >
+                            <Upload className="w-3 h-3 mr-1" /> File Upload
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={imageMode === "url" ? "default" : "outline"}
+                            size="sm"
+                            className="rounded-none text-[10px] uppercase tracking-widest h-8"
+                            onClick={() => setImageMode("url")}
+                          >
+                            <LinkIcon className="w-3 h-3 mr-1" /> External URL
+                          </Button>
+                        </div>
+
+                        {imageMode === "upload" ? (
+                          <div className="space-y-2">
+                            <FormControl>
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileUpload}
+                                disabled={isUploading}
+                                className="rounded-none border-border text-xs cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-none file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                              />
+                            </FormControl>
+                            {isUploading && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Loader2 className="w-3 h-3 animate-spin" /> Uploading to bucket...
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <FormControl>
+                            <Input
+                              className="rounded-none border-border text-xs"
+                              placeholder="https://..."
+                              value={watchedImageUrl}
+                              onChange={(e) => form.setValue("imageUrl", e.target.value, { shouldValidate: true })}
+                            />
+                          </FormControl>
+                        )}
+
+                        {watchedImageUrl && (
+                          <div className="mt-3 aspect-video bg-muted border border-border overflow-hidden relative">
+                            <img src={getImageUrl(watchedImageUrl)} alt="Preview" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+
+                        {uploadError && (
+                          <p className="text-[10px] text-destructive font-bold mt-1">{uploadError}</p>
+                        )}
+
                         <FormMessage className="text-[10px]"/>
                       </FormItem>
                     )}
@@ -497,7 +568,7 @@ export default function AdminProducts() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="rounded-none uppercase font-bold text-xs tracking-widest">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending} className="rounded-none uppercase font-bold text-xs tracking-widest px-8">
+                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending || isUploading} className="rounded-none uppercase font-bold text-xs tracking-widest px-8">
                   {editingProduct ? "Update Product" : "Create Product"}
                 </Button>
               </div>
