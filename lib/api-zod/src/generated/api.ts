@@ -60,6 +60,8 @@ export const ListCategoriesResponseItem = zod.object({
   slug: zod.string(),
   description: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
+  parentId: zod.number().nullish(),
+  sizes: zod.array(zod.string()).optional(),
   isActive: zod.boolean(),
   productCount: zod.number(),
   createdAt: zod.string(),
@@ -74,6 +76,8 @@ export const CreateCategoryBody = zod.object({
   slug: zod.string(),
   description: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
+  parentId: zod.number().nullish(),
+  sizes: zod.array(zod.string()).optional(),
   isActive: zod.boolean(),
 });
 
@@ -89,6 +93,8 @@ export const UpdateCategoryBody = zod.object({
   slug: zod.string(),
   description: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
+  parentId: zod.number().nullish(),
+  sizes: zod.array(zod.string()).optional(),
   isActive: zod.boolean(),
 });
 
@@ -98,6 +104,8 @@ export const UpdateCategoryResponse = zod.object({
   slug: zod.string(),
   description: zod.string().nullish(),
   imageUrl: zod.string().nullish(),
+  parentId: zod.number().nullish(),
+  sizes: zod.array(zod.string()).optional(),
   isActive: zod.boolean(),
   productCount: zod.number(),
   createdAt: zod.string(),

@@ -1,10 +1,10 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import * as schema from "./schema";
+import * as schema from "@workspace/db";
 
 const { Pool } = pg;
 
-// Use standard Direct Supabase DB URI or clean environment variable without conflicting SSL query parameters
+// Environment variable prioritize hoga, warna direct Supabase connection URL fallback ke taur par chalega
 const connectionString =
   process.env.DATABASE_URL ||
   "postgresql://postgres:GeekThriftsPass2026!@db.tzremfxsabivlumuezgd.supabase.co:5432/postgres";
@@ -21,4 +21,5 @@ export const pool = new Pool({
 
 export const db = drizzle(pool, { schema });
 
-export * from "./schema";
+// Re-export all schema tables and types from @workspace/db
+export * from "@workspace/db";

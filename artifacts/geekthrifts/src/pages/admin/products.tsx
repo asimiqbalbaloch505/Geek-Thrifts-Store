@@ -7,8 +7,6 @@ import {
   useDeleteProduct,
   getListProductsQueryKey,
   getListCategoriesQueryKey,
-  Product,
-  Category,
 } from "@workspace/api-client-react";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -44,9 +42,37 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Edit, Plus, Trash2 } from "lucide-react";
 
+// Local Type Extensions to maintain workspace compatibility
 type SizeInventoryItem = { size: string; qty: number };
 
-const sizeInventoryItemSchema = z.object({ size: z.string(), qty: z.coerce.number().min(0) });
+type LocalCategory = {
+  id: number;
+  name: string;
+  slug: string;
+  parentId?: number | null;
+  sizes?: string[];
+  isActive?: boolean;
+};
+
+type LocalProduct = {
+  id: number;
+  name: string;
+  description?: string | null;
+  price: number;
+  imageUrl?: string | null;
+  categoryId: number;
+  categoryName?: string;
+  sizes?: string[];
+  sizeInventory?: SizeInventoryItem[];
+  stock: number;
+  isActive: boolean;
+  isFeatured: boolean;
+};
+
+const sizeInventoryItemSchema = z.object({
+  size: z.string(),
+  qty: z.coerce.number().min(0),
+});
 
 const productSchema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -66,11 +92,12 @@ type ProductValues = z.infer<typeof productSchema>;
 export default function AdminProducts() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<LocalProduct | null>(null);
 
   const { data: products, isLoading } = useListProducts(undefined, {
     query: { queryKey: getListProductsQueryKey() },
   });
+
   const { data: categories } = useListCategories({
     query: { queryKey: getListCategoriesQueryKey() },
   });
@@ -79,12 +106,22 @@ export default function AdminProducts() {
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
 
+  const typedCategories = (categories as LocalCategory[]) || [];
+  const typedProducts = (products as LocalProduct[]) || [];
+
   const form = useForm<ProductValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      name: "", description: "", price: 0, imageUrl: "",
-      categoryId: 0, sizes: [], sizeInventory: [], stock: 0,
-      isActive: true, isFeatured: false,
+      name: "",
+      description: "",
+      price: 0,
+      imageUrl: "",
+      categoryId: 0,
+      sizes: [],
+      sizeInventory: [],
+      stock: 0,
+      isActive: true,
+      isFeatured: false,
     },
   });
 
@@ -92,9 +129,9 @@ export default function AdminProducts() {
   const watchedSizeInventory = useWatch({ control: form.control, name: "sizeInventory" });
 
   // Dynamic helper to determine available sizes with parent category fallback
-  const getAvailableSizesForCategory = (catId: number, catList?: Category[]): string[] => {
-    if (!catId || !catList) return [];
-    const category = catList.find(c => c.id === catId);
+  const getAvailableSizesForCategory = (catId: number, catList: LocalCategory[]): string[] => {
+    if (!catId || !catList.length) return [];
+    const category = catList.find((c) => c.id === catId);
     if (!category) return [];
 
     // If subcategory has own sizes, return them
@@ -104,7 +141,7 @@ export default function AdminProducts() {
 
     // Otherwise inherit parent category sizes
     if (category.parentId) {
-      const parent = catList.find(p => p.id === category.parentId);
+      const parent = catList.find((p) => p.id === category.parentId);
       if (parent?.sizes && parent.sizes.length > 0) {
         return parent.sizes;
       }
@@ -113,8 +150,7 @@ export default function AdminProducts() {
     return [];
   };
 
-  const selectedCategory = categories?.find(c => c.id === Number(watchedCategoryId));
-  const availableSizes = getAvailableSizesForCategory(Number(watchedCategoryId), categories);
+  const availableSizes = getAvailableSizesForCategory(Number(watchedCategoryId), typedCategories);
   const hasSizes = availableSizes.length > 0;
 
   useEffect(() => {
@@ -127,14 +163,21 @@ export default function AdminProducts() {
   const openAddDialog = () => {
     setEditingProduct(null);
     form.reset({
-      name: "", description: "", price: 0, imageUrl: "",
-      categoryId: categories?.[0]?.id || 0,
-      sizes: [], sizeInventory: [], stock: 0, isActive: true, isFeatured: false,
+      name: "",
+      description: "",
+      price: 0,
+      imageUrl: "",
+      categoryId: typedCategories?.[0]?.id || 0,
+      sizes: [],
+      sizeInventory: [],
+      stock: 0,
+      isActive: true,
+      isFeatured: false,
     });
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (product: Product) => {
+  const openEditDialog = (product: LocalProduct) => {
     setEditingProduct(product);
     const inv = (product.sizeInventory ?? []) as SizeInventoryItem[];
     form.reset({
@@ -143,7 +186,7 @@ export default function AdminProducts() {
       price: product.price,
       imageUrl: product.imageUrl || "",
       categoryId: product.categoryId,
-      sizes: inv.map(s => s.size),
+      sizes: inv.map((s) => s.size),
       sizeInventory: inv,
       stock: product.stock,
       isActive: product.isActive,
@@ -161,19 +204,21 @@ export default function AdminProducts() {
   };
 
   const toggleSize = (size: string, checked: boolean) => {
-    const current = form.getValues("sizeInventory");
+    const current = form.getValues("sizeInventory") || [];
+    const currentSizes = form.getValues("sizes") || [];
+
     if (checked) {
       form.setValue("sizeInventory", [...current, { size, qty: 1 }]);
-      form.setValue("sizes", [...form.getValues("sizes"), size]);
+      form.setValue("sizes", [...currentSizes, size]);
     } else {
-      form.setValue("sizeInventory", current.filter(s => s.size !== size));
-      form.setValue("sizes", form.getValues("sizes").filter(s => s !== size));
+      form.setValue("sizeInventory", current.filter((s) => s.size !== size));
+      form.setValue("sizes", currentSizes.filter((s) => s !== size));
     }
   };
 
   const updateQty = (size: string, qty: number) => {
-    const current = form.getValues("sizeInventory");
-    form.setValue("sizeInventory", current.map(s => s.size === size ? { ...s, qty } : s));
+    const current = form.getValues("sizeInventory") || [];
+    form.setValue("sizeInventory", current.map((s) => (s.size === size ? { ...s, qty } : s)));
   };
 
   const onSubmit = (values: ProductValues) => {
@@ -214,14 +259,15 @@ export default function AdminProducts() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {isLoading ? (
           <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">Loading...</div>
-        ) : !products || products.length === 0 ? (
+        ) : typedProducts.length === 0 ? (
           <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">No products found</div>
         ) : (
-          products.map(product => {
+          typedProducts.map((product) => {
             const inv = (product.sizeInventory ?? []) as SizeInventoryItem[];
             const displaySizes = inv.length > 0
-              ? inv.map(s => `${s.size}(${s.qty})`).join(", ")
+              ? inv.map((s) => `${s.size}(${s.qty})`).join(", ")
               : product.stock > 0 ? `Qty: ${product.stock}` : "Out of Stock";
+
             return (
               <div key={product.id} className="border border-border bg-card flex flex-col group">
                 <div className="aspect-[4/3] bg-muted border-b border-border relative">
@@ -314,8 +360,8 @@ export default function AdminProducts() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-none">
-                              {categories?.map((cat) => {
-                                const parentCat = cat.parentId ? categories.find(p => p.id === cat.parentId) : null;
+                              {typedCategories.map((cat) => {
+                                const parentCat = cat.parentId ? typedCategories.find((p) => p.id === cat.parentId) : null;
                                 const label = parentCat ? `${parentCat.name} / ${cat.name}` : cat.name;
 
                                 return (
@@ -338,9 +384,9 @@ export default function AdminProducts() {
                       <p className="text-xs uppercase tracking-widest font-bold mb-2">Sizes &amp; Stock</p>
                       <p className="text-[10px] text-muted-foreground mb-3">Check a size to add it. Set quantity for each selected size.</p>
                       <div className="space-y-2">
-                        {availableSizes.map(size => {
+                        {availableSizes.map((size) => {
                           const inv = watchedSizeInventory ?? [];
-                          const item = inv.find(s => s.size === size);
+                          const item = inv.find((s) => s.size === size);
                           const isChecked = !!item;
                           return (
                             <div key={size} className="flex items-center gap-3 border border-border p-2.5">

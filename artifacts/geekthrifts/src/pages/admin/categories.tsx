@@ -4,8 +4,7 @@ import {
   useCreateCategory,
   useUpdateCategory,
   useDeleteCategory,
-  getListCategoriesQueryKey,
-  Category
+  getListCategoriesQueryKey
 } from "@workspace/api-client-react";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,6 +37,20 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Edit, Plus, Trash2, FolderTree, X } from "lucide-react";
 import { format } from "date-fns";
+
+// Local Category type patch for workspace schema synchronization
+type Category = {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  parentId?: number | null;
+  sizes?: string[];
+  isActive: boolean;
+  createdAt?: string | Date;
+  productCount?: number;
+};
 
 const PRESET_SIZE_GROUPS = [
   { name: "Clothing", sizes: ["S", "M", "L", "XL", "XXL"] },
@@ -163,6 +176,8 @@ export default function AdminCategories() {
     }
   };
 
+  const typedCategories = (categories as Category[]) || [];
+
   return (
     <AdminLayout>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-8 border-b border-border pb-6">
@@ -178,11 +193,11 @@ export default function AdminCategories() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isLoading ? (
           <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">Loading...</div>
-        ) : !categories || categories.length === 0 ? (
+        ) : typedCategories.length === 0 ? (
           <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">No categories found</div>
         ) : (
-          categories.map(category => {
-            const parentCat = categories.find(c => c.id === category.parentId);
+          typedCategories.map(category => {
+            const parentCat = typedCategories.find(c => c.id === category.parentId);
             const sizesToDisplay = category.sizes && category.sizes.length > 0
               ? category.sizes
               : parentCat?.sizes || [];
@@ -229,7 +244,7 @@ export default function AdminCategories() {
 
                 <div className="mt-auto flex justify-between items-center text-[10px] uppercase tracking-widest font-bold border-t border-border pt-4">
                   <div>{category.productCount ?? 0} Products</div>
-                  <div>Added {format(new Date(category.createdAt), "MMM yyyy")}</div>
+                  <div>Added {category.createdAt ? format(new Date(category.createdAt), "MMM yyyy") : "N/A"}</div>
                 </div>
               </div>
             );
@@ -288,7 +303,7 @@ export default function AdminCategories() {
                     </FormControl>
                     <SelectContent className="rounded-none">
                       <SelectItem value="none">None (Main Category)</SelectItem>
-                      {categories?.filter(c => !c.parentId && c.id !== editingCategory?.id).map((cat) => (
+                      {typedCategories.filter(c => !c.parentId && c.id !== editingCategory?.id).map((cat) => (
                         <SelectItem key={cat.id} value={String(cat.id)}>{cat.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -297,7 +312,7 @@ export default function AdminCategories() {
                 </FormItem>
               )} />
 
-              {/* Sizes Setup Field (wrapped inside FormField to ensure Shadcn Form context compliance) */}
+              {/* Sizes Setup Field */}
               <FormField
                 control={form.control}
                 name="sizes"
@@ -334,7 +349,7 @@ export default function AdminCategories() {
                     </div>
 
                     <div className="flex flex-wrap gap-1.5 pt-2">
-                      {(field.value || []).map((size) => (
+                      {(field.value || []).map((size: string) => (
                         <span key={size} className="inline-flex items-center gap-1 bg-muted border border-border px-2 py-1 text-xs font-mono font-bold uppercase">
                           {size}
                           <button type="button" onClick={() => removeSize(size)} className="hover:text-destructive">

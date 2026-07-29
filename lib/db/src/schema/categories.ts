@@ -1,5 +1,5 @@
 import { pgTable, serial, text, boolean, timestamp, integer, foreignKey } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const categoriesTable = pgTable(
@@ -11,7 +11,7 @@ export const categoriesTable = pgTable(
     description: text("description"),
     imageUrl: text("image_url"),
     parentId: integer("parent_id"),
-    sizes: text("sizes").array().notNull().default([]), // <--- Added dynamic sizes field
+    sizes: text("sizes").array().notNull().default([]), // Dynamic sizes array for clothing/thrifting categories
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
@@ -24,7 +24,13 @@ export const categoriesTable = pgTable(
   ]
 );
 
-// Added "as any" to resolve drizzle-zod type version mismatch with Zod Infer
+// Zod schemas with TypeScript safety bypasses for monorepo type checking
 export const insertCategorySchema = createInsertSchema(categoriesTable).omit({ id: true, createdAt: true }) as any;
+export const selectCategorySchema = createSelectSchema(categoriesTable) as any;
+
+// Type exports expected by @workspace/api-server and frontend (@workspace/geekthrifts)
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
-export type Category = typeof categoriesTable.$inferSelect;
+export type Category = typeof categoriesTable.$inferSelect & {
+  parentId?: number | null;
+  sizes?: string[];
+};
