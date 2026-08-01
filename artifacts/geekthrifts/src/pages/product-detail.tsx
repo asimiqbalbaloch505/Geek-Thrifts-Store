@@ -3,10 +3,11 @@ import { useGetProduct, getGetProductQueryKey, useListProducts, Product } from "
 import { useParams, Link } from "wouter";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, TouchEvent } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
-import { Minus, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Minus, Plus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 
 type SizeInventoryItem = { size: string; qty: number };
 
@@ -25,7 +26,161 @@ const TIE_WIDTH_GUIDE = [
   { label: "Skinny", inches: 'Under 2"', cm: "Under 5 cm", for: "Fashion-forward, very slim lapels" },
 ];
 
-function ProductImageGallery({ images, name, isCompletelyOutOfStock, totalStock }: { images: string[]; name: string; isCompletelyOutOfStock: boolean; totalStock: number }) {
+function MobileImageSlider({
+  images,
+  name,
+  isCompletelyOutOfStock,
+  totalStock,
+}: {
+  images: string[];
+  name: string;
+  isCompletelyOutOfStock: boolean;
+  totalStock: number;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+
+  // Auto-slide every 4 seconds
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [images.length]);
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % images.length);
+  };
+
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 40;
+
+    if (distance > minSwipeDistance) {
+      handleNext();
+    } else if (distance < -minSwipeDistance) {
+      handlePrev();
+    }
+
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
+  return (
+    <div className="relative w-full overflow-hidden bg-gray-50 border border-gray-100 rounded-sm">
+      <div
+        className="relative aspect-[4/5] w-full"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Sliding images wrapper */}
+        <div
+          className="flex h-full w-full transition-transform duration-500 ease-out"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        >
+          {images.map((imgUrl, idx) => (
+            <div key={idx} className="relative min-w-full h-full flex-shrink-0">
+              <img
+                src={getImageUrl(imgUrl)}
+                alt={`${name} view ${idx + 1}`}
+                className="w-full h-full object-cover object-center"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Stock Badges */}
+        {isCompletelyOutOfStock && (
+          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+            <span className="text-[13px] uppercase tracking-widest font-semibold text-gray-700">
+              Out of Stock
+            </span>
+          </div>
+        )}
+        {!isCompletelyOutOfStock && totalStock <= 2 && (
+          <span className="absolute top-3 left-3 bg-gray-900 text-white text-[10px] px-2.5 py-1 uppercase tracking-wider font-semibold z-10">
+            Last {totalStock}
+          </span>
+        )}
+
+        {/* Left / Right Arrow Controls */}
+        {images.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={handlePrev}
+              aria-label="Previous image"
+              className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/80 hover:bg-white text-gray-800 rounded-full shadow-sm transition-colors z-10"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              aria-label="Next image"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white/80 hover:bg-white text-gray-800 rounded-full shadow-sm transition-colors z-10"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Ndure style counter badge (e.g., 3/5) */}
+      {images.length > 1 && (
+        <div className="py-2.5 flex items-center justify-center gap-4 bg-white border-t border-gray-100">
+          <button
+            type="button"
+            onClick={handlePrev}
+            className="text-gray-500 hover:text-black transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-[12px] tracking-widest font-semibold text-gray-600">
+            {currentIndex + 1}/{images.length}
+          </span>
+          <button
+            type="button"
+            onClick={handleNext}
+            className="text-gray-500 hover:text-black transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProductImageGallery({
+  images,
+  name,
+  isCompletelyOutOfStock,
+  totalStock,
+}: {
+  images: string[];
+  name: string;
+  isCompletelyOutOfStock: boolean;
+  totalStock: number;
+}) {
+  const isMobile = useIsMobile();
   const displayImages = images.length > 0 ? images : [];
 
   if (displayImages.length === 0) {
@@ -33,6 +188,17 @@ function ProductImageGallery({ images, name, isCompletelyOutOfStock, totalStock 
       <div className="w-full aspect-[4/5] bg-gray-50 flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest border border-gray-100 rounded-sm">
         No Image
       </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <MobileImageSlider
+        images={displayImages}
+        name={name}
+        isCompletelyOutOfStock={isCompletelyOutOfStock}
+        totalStock={totalStock}
+      />
     );
   }
 
@@ -79,7 +245,7 @@ function TieSizeGuide() {
         {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
       </button>
       {open && (
-        <div className="border border-gray-100 text-[11px] mb-4">
+        <div className="border border-gray-100 text-[11px] mb-4 overflow-x-auto">
           <div className="px-3 py-2 bg-gray-50 text-[10px] uppercase tracking-[0.12em] font-bold text-gray-500">
             Length
           </div>
