@@ -223,7 +223,7 @@ export default function ProductDetail() {
       <Layout>
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 md:py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-20">
-            <Skeleton className="aspect-[3/4] w-full rounded-none bg-gray-100" />
+            <Skeleton className="h-[450px] w-full rounded-none bg-gray-100" />
             <div className="flex flex-col pt-4 space-y-4">
               <Skeleton className="h-5 w-20 rounded-none bg-gray-100" />
               <Skeleton className="h-10 w-3/4 rounded-none bg-gray-100" />
@@ -260,7 +260,7 @@ export default function ProductDetail() {
 
   return (
     <Layout>
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 md:py-16">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 md:py-12">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-8">
           <Link href="/" className="hover:text-gray-700 transition-colors">
@@ -277,14 +277,14 @@ export default function ProductDetail() {
           <span className="text-gray-700 truncate">{product.name}</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-20">
-          {/* Image Container */}
-          <div className="aspect-[3/4] bg-gray-50 relative overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-start">
+          {/* Image Container with Controlled Height */}
+          <div className="w-full max-h-[500px] lg:max-h-[550px] aspect-[4/5] bg-gray-50 relative overflow-hidden rounded-sm border border-gray-100 flex items-center justify-center">
             {product.imageUrl ? (
               <img
                 src={getImageUrl(product.imageUrl)}
                 alt={product.name}
-                className="w-full h-full object-cover object-center"
+                className="w-full h-full object-contain object-center p-2"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest">
@@ -305,8 +305,8 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {/* Product Info */}
-          <div className="flex flex-col">
+          {/* Product Info - Sticky sidebar for desktop */}
+          <div className="flex flex-col md:sticky md:top-24">
             <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-2">
               {product.categoryName || "GeekThrifts"}
             </p>
