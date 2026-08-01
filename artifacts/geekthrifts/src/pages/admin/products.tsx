@@ -591,141 +591,151 @@ export default function AdminProducts() {
 
                 {/* Right Column - Multi-Image Manager */}
                 <div className="space-y-5">
-                  <div>
-                    <FormLabel className="text-xs uppercase tracking-widest font-bold block mb-2">
-                      Product Images ({watchedImages.length}/5)
-                    </FormLabel>
+                  <FormField
+                    control={form.control}
+                    name="images"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-xs uppercase tracking-widest font-bold block mb-2">
+                          Product Images ({watchedImages.length}/5)
+                        </FormLabel>
 
-                    {/* Image slot selector tabs */}
-                    <div className="flex gap-1 mb-3">
-                      {[0, 1, 2, 3, 4].map((idx) => {
-                        const hasImg = Boolean(watchedImages[idx]);
-                        return (
-                          <button
-                            key={idx}
+                        {/* Image slot selector tabs */}
+                        <div className="flex gap-1 mb-3">
+                          {[0, 1, 2, 3, 4].map((idx) => {
+                            const hasImg = Boolean(watchedImages[idx]);
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setActiveImageIndex(idx)}
+                                className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                                  activeImageIndex === idx
+                                    ? "border-foreground bg-foreground text-background"
+                                    : hasImg
+                                    ? "border-border bg-muted text-foreground"
+                                    : "border-dashed border-border text-muted-foreground"
+                                }`}
+                              >
+                                Image {idx + 1}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Upload or URL switcher for active index */}
+                        <div className="flex gap-2 mb-3">
+                          <Button
                             type="button"
-                            onClick={() => setActiveImageIndex(idx)}
-                            className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-wider border transition-colors ${
-                              activeImageIndex === idx
-                                ? "border-foreground bg-foreground text-background"
-                                : hasImg
-                                ? "border-border bg-muted text-foreground"
-                                : "border-dashed border-border text-muted-foreground"
-                            }`}
+                            variant={
+                              imageModes[activeImageIndex] === "upload" ? "default" : "outline"
+                            }
+                            size="sm"
+                            className="rounded-none text-[10px] uppercase tracking-widest h-8"
+                            onClick={() =>
+                              setImageModes((prev) => ({ ...prev, [activeImageIndex]: "upload" }))
+                            }
                           >
-                            Image {idx + 1}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Upload or URL switcher for active index */}
-                    <div className="flex gap-2 mb-3">
-                      <Button
-                        type="button"
-                        variant={
-                          imageModes[activeImageIndex] === "upload" ? "default" : "outline"
-                        }
-                        size="sm"
-                        className="rounded-none text-[10px] uppercase tracking-widest h-8"
-                        onClick={() =>
-                          setImageModes((prev) => ({ ...prev, [activeImageIndex]: "upload" }))
-                        }
-                      >
-                        <Upload className="w-3 h-3 mr-1" /> File Upload
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={
-                          imageModes[activeImageIndex] === "url" ? "default" : "outline"
-                        }
-                        size="sm"
-                        className="rounded-none text-[10px] uppercase tracking-widest h-8"
-                        onClick={() =>
-                          setImageModes((prev) => ({ ...prev, [activeImageIndex]: "url" }))
-                        }
-                      >
-                        <LinkIcon className="w-3 h-3 mr-1" /> External URL
-                      </Button>
-                    </div>
-
-                    {/* Input control according to mode */}
-                    {imageModes[activeImageIndex] === "upload" ? (
-                      <div className="space-y-2">
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUploadForIndex(e, activeImageIndex)}
-                          disabled={uploadingSlots[activeImageIndex]}
-                          className="rounded-none border-border text-xs cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-none file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                        />
-                        {uploadingSlots[activeImageIndex] && (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Loader2 className="w-3 h-3 animate-spin" /> Uploading image{" "}
-                            {activeImageIndex + 1}...
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <Input
-                        className="rounded-none border-border text-xs"
-                        placeholder="https://..."
-                        value={watchedImages[activeImageIndex] || ""}
-                        onChange={(e) =>
-                          updateImageUrlAtIndex(e.target.value, activeImageIndex)
-                        }
-                      />
-                    )}
-
-                    {/* Thumbnail Grid Preview */}
-                    <div className="grid grid-cols-5 gap-2 mt-4">
-                      {[0, 1, 2, 3, 4].map((idx) => {
-                        const img = watchedImages[idx];
-                        return (
-                          <div
-                            key={idx}
-                            onClick={() => setActiveImageIndex(idx)}
-                            className={`aspect-square bg-muted border relative group cursor-pointer overflow-hidden ${
-                              activeImageIndex === idx
-                                ? "ring-2 ring-primary"
-                                : "border-border"
-                            }`}
+                            <Upload className="w-3 h-3 mr-1" /> File Upload
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={
+                              imageModes[activeImageIndex] === "url" ? "default" : "outline"
+                            }
+                            size="sm"
+                            className="rounded-none text-[10px] uppercase tracking-widest h-8"
+                            onClick={() =>
+                              setImageModes((prev) => ({ ...prev, [activeImageIndex]: "url" }))
+                            }
                           >
-                            {img ? (
-                              <>
-                                <img
-                                  src={getImageUrl(img)}
-                                  alt={`Slot ${idx + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removeImageAtIndex(idx);
-                                  }}
-                                  className="absolute top-0.5 right-0.5 bg-background/80 text-foreground p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </>
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground font-bold">
-                                +{idx + 1}
+                            <LinkIcon className="w-3 h-3 mr-1" /> External URL
+                          </Button>
+                        </div>
+
+                        {/* Input control according to mode */}
+                        {imageModes[activeImageIndex] === "upload" ? (
+                          <div className="space-y-2">
+                            <FormControl>
+                              <Input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleFileUploadForIndex(e, activeImageIndex)}
+                                disabled={uploadingSlots[activeImageIndex]}
+                                className="rounded-none border-border text-xs cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-none file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                              />
+                            </FormControl>
+                            {uploadingSlots[activeImageIndex] && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Loader2 className="w-3 h-3 animate-spin" /> Uploading image{" "}
+                                {activeImageIndex + 1}...
                               </div>
                             )}
                           </div>
-                        );
-                      })}
-                    </div>
+                        ) : (
+                          <FormControl>
+                            <Input
+                              className="rounded-none border-border text-xs"
+                              placeholder="https://..."
+                              value={watchedImages[activeImageIndex] || ""}
+                              onChange={(e) =>
+                                updateImageUrlAtIndex(e.target.value, activeImageIndex)
+                              }
+                            />
+                          </FormControl>
+                        )}
 
-                    {uploadError && (
-                      <p className="text-[10px] text-destructive font-bold mt-2">
-                        {uploadError}
-                      </p>
+                        {/* Thumbnail Grid Preview */}
+                        <div className="grid grid-cols-5 gap-2 mt-4">
+                          {[0, 1, 2, 3, 4].map((idx) => {
+                            const img = watchedImages[idx];
+                            return (
+                              <div
+                                key={idx}
+                                onClick={() => setActiveImageIndex(idx)}
+                                className={`aspect-square bg-muted border relative group cursor-pointer overflow-hidden ${
+                                  activeImageIndex === idx
+                                    ? "ring-2 ring-primary"
+                                    : "border-border"
+                                }`}
+                              >
+                                {img ? (
+                                  <>
+                                    <img
+                                      src={getImageUrl(img)}
+                                      alt={`Slot ${idx + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeImageAtIndex(idx);
+                                      }}
+                                      className="absolute top-0.5 right-0.5 bg-background/80 text-foreground p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground font-bold">
+                                    +{idx + 1}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {uploadError && (
+                          <p className="text-[10px] text-destructive font-bold mt-2">
+                            {uploadError}
+                          </p>
+                        )}
+                        <FormMessage className="text-[10px] mt-1" />
+                      </FormItem>
                     )}
-                    <FormMessage className="text-[10px] mt-1" />
-                  </div>
+                  />
 
                   <FormField
                     control={form.control}
