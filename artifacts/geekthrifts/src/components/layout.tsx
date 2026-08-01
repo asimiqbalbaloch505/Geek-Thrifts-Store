@@ -59,6 +59,14 @@ function TikTokIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+function WhatsAppIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.285-.143-1.688-.833-1.949-.928-.261-.095-.451-.143-.641.143-.19.285-.736.928-.903 1.118-.166.19-.333.214-.618.071-.285-.143-1.204-.444-2.293-1.415-.847-.756-1.42-1.69-1.586-1.975-.166-.285-.018-.439.125-.581.129-.128.285-.333.428-.5.143-.166.19-.285.285-.476.095-.19.048-.357-.024-.5-.071-.143-.641-1.545-.879-2.116-.231-.557-.466-.481-.641-.49-.166-.008-.357-.01-.547-.01-.19 0-.5.071-.761.357-.261.285-1.002.981-1.002 2.392 0 1.411 1.026 2.775 1.169 2.965.143.19 2.02 3.084 4.894 4.326.684.296 1.218.473 1.634.605.686.218 1.311.187 1.805.114.551-.082 1.688-.689 1.926-1.355.238-.666.238-1.237.166-1.355-.071-.118-.261-.19-.547-.333z"/>
+    </svg>
+  );
+}
+
 /* ─────────────────────────────────────────────────────────
    Simple dropdown panel
 ───────────────────────────────────────────────────────── */
@@ -176,6 +184,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     facebook: "https://www.facebook.com/people/Geek-Thrifts-Store/61578288207386/",
     instagram: "https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==",
     tiktok: "#",
+    whatsapp: "https://wa.me/923320561126",
   };
 
   return (
@@ -214,6 +223,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-3 sm:gap-4 ml-auto">
             {/* Social Icons */}
             <div className="flex items-center gap-2.5 sm:gap-3 text-gray-600">
+              <a
+                href={socialLinks.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="WhatsApp"
+                className="hover:text-emerald-600 transition-colors p-1"
+              >
+                <WhatsAppIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </a>
               <a
                 href={socialLinks.facebook}
                 target="_blank"
@@ -480,8 +498,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </ul>
             </div>
 
-            {/* Social Icons */}
+            {/* Social Icons including WhatsApp */}
             <div className="flex items-center gap-5 text-gray-600 pt-2 border-t border-gray-100 w-full justify-center">
+              <a
+                href={socialLinks.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="WhatsApp"
+                className="hover:text-emerald-600 transition-colors p-1"
+              >
+                <WhatsAppIcon className="w-5 h-5" />
+              </a>
               <a
                 href={socialLinks.facebook}
                 target="_blank"
