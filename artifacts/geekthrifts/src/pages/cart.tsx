@@ -1,5 +1,5 @@
 import { Layout } from "@/components/layout";
-import { useCart } from "@/hooks/use-cart";
+import { useCart, getMaxStockForItem } from "@/hooks/use-cart";
 import { Link } from "wouter";
 import { formatPKR } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,66 +27,79 @@ export default function Cart() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             {/* Cart Items */}
             <div className="lg:col-span-2 flex flex-col gap-6">
-              {items.map((item) => (
-                <div key={`${item.product.id}-${item.selectedSize}`} className="flex gap-6 border border-border p-4 relative pr-12">
-                  <Link href={`/products/${item.product.id}`} className="w-24 h-32 flex-shrink-0 bg-muted border border-border block">
-                    {item.product.imageUrl ? (
-                      <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] uppercase text-muted-foreground">No img</div>
-                    )}
-                  </Link>
-                  
-                  <div className="flex-1 flex flex-col font-sans">
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">
-                      {item.product.categoryName}
-                    </div>
-                    <Link href={`/products/${item.product.id}`} className="font-serif text-xl font-bold uppercase hover:underline underline-offset-4">
-                      {item.product.name}
-                    </Link>
-                    <div className="text-sm font-bold mt-1 mb-4">
-                      {formatPKR(item.product.price)}
-                    </div>
-                    
-                    <div className="mt-auto flex flex-wrap gap-6 items-end">
-                      {item.selectedSize && item.selectedSize !== "OS" && (
-                        <div>
-                          <span className="text-[10px] uppercase tracking-widest font-bold block mb-1 text-muted-foreground">Size</span>
-                          <span className="text-sm font-bold">{item.selectedSize}</span>
-                        </div>
+              {items.map((item) => {
+                const maxStock = getMaxStockForItem(item.product, item.selectedSize);
+                const isMaxReached = item.quantity >= maxStock;
+
+                return (
+                  <div key={`${item.product.id}-${item.selectedSize}`} className="flex gap-6 border border-border p-4 relative pr-12">
+                    <Link href={`/products/${item.product.id}`} className="w-24 h-32 flex-shrink-0 bg-muted border border-border block">
+                      {item.product.imageUrl ? (
+                        <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[10px] uppercase text-muted-foreground">No img</div>
                       )}
+                    </Link>
+                    
+                    <div className="flex-1 flex flex-col font-sans">
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">
+                        {item.product.categoryName}
+                      </div>
+                      <Link href={`/products/${item.product.id}`} className="font-serif text-xl font-bold uppercase hover:underline underline-offset-4">
+                        {item.product.name}
+                      </Link>
+                      <div className="text-sm font-bold mt-1 mb-4">
+                        {formatPKR(item.product.price)}
+                      </div>
                       
-                      <div>
-                        <span className="text-[10px] uppercase tracking-widest font-bold block mb-1 text-muted-foreground">Quantity</span>
-                        <div className="flex items-center border border-border w-24 h-8">
-                          <button 
-                            onClick={() => updateQuantity(item.product.id, item.selectedSize, item.quantity - 1)}
-                            className="w-8 h-full flex items-center justify-center hover:bg-muted transition-colors"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <div className="flex-1 text-center font-bold text-xs">
-                            {item.quantity}
+                      <div className="mt-auto flex flex-wrap gap-6 items-end">
+                        {item.selectedSize && item.selectedSize !== "OS" && (
+                          <div>
+                            <span className="text-[10px] uppercase tracking-widest font-bold block mb-1 text-muted-foreground">Size</span>
+                            <span className="text-sm font-bold">{item.selectedSize}</span>
                           </div>
-                          <button 
-                            onClick={() => updateQuantity(item.product.id, item.selectedSize, item.quantity + 1)}
-                            className="w-8 h-full flex items-center justify-center hover:bg-muted transition-colors"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
+                        )}
+                        
+                        <div>
+                          <span className="text-[10px] uppercase tracking-widest font-bold block mb-1 text-muted-foreground">Quantity</span>
+                          <div className="flex items-center border border-border w-24 h-8">
+                            <button 
+                              onClick={() => updateQuantity(item.product.id, item.selectedSize, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                              className="w-8 h-full flex items-center justify-center hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <div className="flex-1 text-center font-bold text-xs">
+                              {item.quantity}
+                            </div>
+                            <button 
+                              onClick={() => updateQuantity(item.product.id, item.selectedSize, item.quantity + 1)}
+                              disabled={isMaxReached}
+                              title={isMaxReached ? "Maximum stock reached" : "Increase quantity"}
+                              className="w-8 h-full flex items-center justify-center hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                          {isMaxReached && (
+                            <span className="text-[9px] uppercase font-bold text-amber-600 block mt-1 tracking-wider">
+                              Max Stock
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
+                    
+                    <button 
+                      onClick={() => removeFromCart(item.product.id, item.selectedSize)}
+                      className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
                   </div>
-                  
-                  <button 
-                    onClick={() => removeFromCart(item.product.id, item.selectedSize)}
-                    className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             {/* Order Summary */}

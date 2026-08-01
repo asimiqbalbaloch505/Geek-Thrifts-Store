@@ -15,9 +15,34 @@ type CartContextType = {
   clearCart: () => void;
   totalItems: number;
   totalAmount: number;
+  getMaxStock: (product: Product, size: string) => number;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+export function getMaxStockForItem(product: any, size: string): number {
+  if (!product) return 0;
+
+  let directInv = product.sizeInventory ?? product.size_inventory;
+  if (typeof directInv === "string") {
+    try {
+      directInv = JSON.parse(directInv);
+    } catch {
+      directInv = [];
+    }
+  }
+
+  if (Array.isArray(directInv) && directInv.length > 0) {
+    const sizeItem = directInv.find(
+      (s: any) => String(s.size).toLowerCase() === String(size).toLowerCase()
+    );
+    if (sizeItem && typeof sizeItem.qty === "number") {
+      return sizeItem.qty;
+    }
+  }
+
+  return product.stock ?? 1;
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -30,6 +55,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   const addToCart = (product: Product, size: string, quantity: number) => {
+    const maxStock = getMaxStockForItem(product, size);
+
     setItems((current) => {
       const existing = current.find(
         (item) => item.product.id === product.id && item.selectedSize === size
@@ -37,11 +64,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (existing) {
         return current.map((item) =>
           item.product.id === product.id && item.selectedSize === size
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: Math.min(item.quantity + quantity, maxStock) }
             : item
         );
       }
-      return [...current, { product, selectedSize: size, quantity }];
+      return [...current, { product, selectedSize: size, quantity: Math.min(quantity, maxStock) }];
     });
   };
 
@@ -56,11 +83,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateQuantity = (productId: number, size: string, quantity: number) => {
     if (quantity < 1) return;
     setItems((current) =>
-      current.map((item) =>
-        item.product.id === productId && item.selectedSize === size
-          ? { ...item, quantity }
-          : item
-      )
+      current.map((item) => {
+        if (item.product.id === productId && item.selectedSize === size) {
+          const maxStock = getMaxStockForItem(item.product, size);
+          return { ...item, quantity: Math.min(quantity, maxStock) };
+        }
+        return item;
+      })
     );
   };
 
@@ -84,6 +113,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         clearCart,
         totalItems,
         totalAmount,
+        getMaxStock: getMaxStockForItem,
       }}
     >
       {children}
