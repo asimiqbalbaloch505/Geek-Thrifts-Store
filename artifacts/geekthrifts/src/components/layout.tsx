@@ -3,7 +3,7 @@ import logoImg from "@assets/WhatsApp_Image_2026-06-19_at_21.50.52_1781941051375
 import { useCart } from "@/hooks/use-cart";
 import { useUserAuth } from "@/hooks/use-user-auth";
 import { useListCategories, getListCategoriesQueryKey } from "@workspace/api-client-react";
-import { Menu, X, ShoppingBag, User, LogOut, ChevronDown, UserPlus, LogIn, Plus, Minus } from "lucide-react";
+import { Menu, X, ShoppingBag, User, LogOut, ChevronDown, UserPlus, LogIn } from "lucide-react";
 import { useState, useRef, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -142,7 +142,6 @@ function NavItemWithMenu({ item }: { item: NestedCategory }) {
 export function Layout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedMobile, setExpandedMobile] = useState<string | null>(null);
-  const [expandedFooter, setExpandedFooter] = useState<string | null>(null); // Mobile footer accordion state
   const { totalItems } = useCart();
   const { isUserLoggedIn, user, userLogout } = useUserAuth();
   const [location] = useLocation();
@@ -177,10 +176,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     facebook: "https://www.facebook.com/people/Geek-Thrifts-Store/61578288207386/",
     instagram: "https://www.instagram.com/geek.thrifts?igsh=MWJwaXVpNGZjajFwdA==",
     tiktok: "#",
-  };
-
-  const toggleFooterAccordion = (key: string) => {
-    setExpandedFooter(expandedFooter === key ? null : key);
   };
 
   return (
@@ -431,7 +426,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-100 mt-8">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6 md:py-10">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 md:py-10">
           {/* DESKTOP FOOTER GRID (Hidden on Mobile) */}
           <div className="hidden md:grid grid-cols-4 lg:grid-cols-6 gap-6">
             {navItems.map((cat) => (
@@ -465,95 +460,55 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          {/* MOBILE FOOTER ACCORDION (Hidden on Desktop) */}
-          <div className="md:hidden divide-y divide-gray-100 border-b border-gray-100">
-            {navItems.map((cat) => {
-              const isOpen = expandedFooter === cat.slug;
-              return (
-                <div key={cat.id} className="py-3">
-                  <button
-                    onClick={() => toggleFooterAccordion(cat.slug)}
-                    className="w-full flex items-center justify-between text-left"
-                  >
-                    <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-900">
-                      {cat.name}
-                    </span>
-                    {isOpen ? (
-                      <Minus className="w-3.5 h-3.5 text-gray-500" />
-                    ) : (
-                      <Plus className="w-3.5 h-3.5 text-gray-400" />
-                    )}
-                  </button>
+          {/* MOBILE FOOTER (Clean Customer Care + Social Icons) */}
+          <div className="md:hidden flex flex-col items-center text-center space-y-6 py-2">
+            {/* Customer Care Links */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3">
+                Customer Care
+              </p>
+              <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+                {helpLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href}>
+                      <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">
+                        {link.label}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-                  <AnimatePresence>
-                    {isOpen && (
-                      <motion.ul
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.18 }}
-                        className="overflow-hidden pt-2.5 pb-1 space-y-2 pl-2"
-                      >
-                        <li>
-                          <Link href={`/products?category=${cat.slug}`}>
-                            <span className="text-[12px] font-semibold text-gray-800 hover:text-black uppercase tracking-[0.08em] transition-colors cursor-pointer">
-                              All {cat.name}
-                            </span>
-                          </Link>
-                        </li>
-                        {cat.subs.map((sub) => (
-                          <li key={sub.id}>
-                            <Link href={`/products?category=${sub.slug}`}>
-                              <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">
-                                {sub.name}
-                              </span>
-                            </Link>
-                          </li>
-                        ))}
-                      </motion.ul>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            })}
-
-            {/* Customer Care Accordion */}
-            <div className="py-3">
-              <button
-                onClick={() => toggleFooterAccordion("customer-care")}
-                className="w-full flex items-center justify-between text-left"
+            {/* Social Icons */}
+            <div className="flex items-center gap-5 text-gray-600 pt-2 border-t border-gray-100 w-full justify-center">
+              <a
+                href={socialLinks.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Facebook"
+                className="hover:text-black transition-colors p-1"
               >
-                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-900">
-                  Customer Care
-                </span>
-                {expandedFooter === "customer-care" ? (
-                  <Minus className="w-3.5 h-3.5 text-gray-500" />
-                ) : (
-                  <Plus className="w-3.5 h-3.5 text-gray-400" />
-                )}
-              </button>
-
-              <AnimatePresence>
-                {expandedFooter === "customer-care" && (
-                  <motion.ul
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.18 }}
-                    className="overflow-hidden pt-2.5 pb-1 space-y-2 pl-2"
-                  >
-                    {helpLinks.map((link) => (
-                      <li key={link.href}>
-                        <Link href={link.href}>
-                          <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">
-                            {link.label}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </motion.ul>
-                )}
-              </AnimatePresence>
+                <FacebookIcon className="w-5 h-5" />
+              </a>
+              <a
+                href={socialLinks.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="hover:text-black transition-colors p-1"
+              >
+                <InstagramIcon className="w-5 h-5" />
+              </a>
+              <a
+                href={socialLinks.tiktok}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="TikTok"
+                className="hover:text-black transition-colors p-1"
+              >
+                <TikTokIcon className="w-5 h-5" />
+              </a>
             </div>
           </div>
         </div>
