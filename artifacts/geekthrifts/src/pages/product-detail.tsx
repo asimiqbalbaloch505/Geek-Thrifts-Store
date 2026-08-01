@@ -30,6 +30,7 @@ function TieSizeGuide() {
   return (
     <div className="mb-6">
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-500 hover:text-black transition-colors mb-3"
       >
@@ -87,13 +88,9 @@ function TieSizeGuide() {
   );
 }
 
-/**
- * Helper function to extract and convert sizes into SizeInventoryItem[]
- */
 function resolveSizeInventory(product: any): SizeInventoryItem[] {
   if (!product) return [];
 
-  // Check direct sizeInventory field first
   let directInv = product.sizeInventory ?? product.size_inventory;
   if (typeof directInv === "string") {
     try {
@@ -106,7 +103,6 @@ function resolveSizeInventory(product: any): SizeInventoryItem[] {
     return directInv;
   }
 
-  // Fall back to category/product `sizes` array (as shown in Database image)
   let rawSizes = product.sizes ?? product.category?.sizes ?? product.categorySizes;
   if (typeof rawSizes === "string") {
     try {
@@ -118,7 +114,6 @@ function resolveSizeInventory(product: any): SizeInventoryItem[] {
 
   if (Array.isArray(rawSizes) && rawSizes.length > 0) {
     const totalStock = product.stock ?? 1;
-    // Map array of size strings like ["S", "M", "L", "XL"] to SizeInventoryItem format
     return rawSizes.map((sz: string) => ({
       size: String(sz),
       qty: totalStock > 0 ? totalStock : 0,
@@ -141,16 +136,14 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
 
-  const categorySlug = product?.categoryName?.toLowerCase() ?? "";
+  const categorySlug = product?.categoryName ? product.categoryName.toLowerCase() : "";
   const isNoSize = NO_SIZE_SLUGS.has(categorySlug);
   const isTie = categorySlug.includes("tie");
   const isShoe = categorySlug.includes("shoe");
 
-  // Derive size list dynamically from product & category
   const sizeInventory = useMemo(() => resolveSizeInventory(product), [product]);
   const hasSizeInventory = sizeInventory.length > 0 && !isNoSize;
 
-  // Pre-select size automatically if there's only 1 available size in stock
   useEffect(() => {
     if (hasSizeInventory) {
       const availableSizes = sizeInventory.filter((s) => s.qty > 0);
@@ -160,16 +153,13 @@ export default function ProductDetail() {
     }
   }, [hasSizeInventory, sizeInventory]);
 
-  // Total stock across all sizes or flat stock
   const totalStock = product?.stock ?? 0;
 
-  // Selected size stock calculations
   const selectedSizeItem = hasSizeInventory
     ? sizeInventory.find((s) => s.size === selectedSize)
     : null;
   const selectedSizeStock = selectedSizeItem?.qty ?? 0;
 
-  // Maximum quantity achievable
   const maxQty = hasSizeInventory
     ? selectedSize
       ? selectedSizeStock
@@ -262,17 +252,17 @@ export default function ProductDetail() {
           </Link>
           <span>/</span>
           <Link
-            href={`/products?category=${product.categoryName?.toLowerCase()}`}
+            href={`/products?category=${categorySlug}`}
             className="hover:text-gray-700 transition-colors capitalize"
           >
-            {product.categoryName}
+            {product.categoryName || "Category"}
           </Link>
           <span>/</span>
           <span className="text-gray-700 truncate">{product.name}</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-20">
-          {/* Image */}
+          {/* Image Container */}
           <div className="aspect-[3/4] bg-gray-50 relative overflow-hidden">
             {product.imageUrl ? (
               <img
@@ -299,10 +289,10 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {/* Product Details */}
+          {/* Product Info */}
           <div className="flex flex-col">
             <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-2">
-              {product.categoryName}
+              {product.categoryName || "GeekThrifts"}
             </p>
             <h1 className="font-serif text-3xl md:text-4xl font-bold tracking-tight text-gray-900 leading-tight mb-3">
               {product.name}

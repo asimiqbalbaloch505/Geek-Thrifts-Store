@@ -4,7 +4,6 @@ import { Link, useSearch } from "wouter";
 import { Layout } from "@/components/layout";
 
 export default function CustomerProductsPage() {
-  // useSearch hook forces React to re-render when query params change in Wouter
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const selectedCategorySlug = searchParams.get("category");
@@ -12,19 +11,19 @@ export default function CustomerProductsPage() {
   const { data: products, isLoading: loadingProducts } = useListProducts();
   const { data: categories } = useListCategories();
 
-  const activeCategory = categories?.find((c) => c.slug === selectedCategorySlug);
+  const activeCategory = categories?.find(
+    (c: Category) => c.slug?.toLowerCase() === selectedCategorySlug?.toLowerCase()
+  );
 
-  // Get active category ID and all its subcategory IDs (if any)
   const matchingCategoryIds = new Set<number>();
   if (activeCategory) {
     matchingCategoryIds.add(activeCategory.id);
-    // Include child categories if the user clicked a parent category
     categories
-      ?.filter((c) => c.parentId === activeCategory.id)
-      .forEach((child) => matchingCategoryIds.add(child.id));
+      ?.filter((c: Category) => c.parentId === activeCategory.id)
+      .forEach((child: Category) => matchingCategoryIds.add(child.id));
   }
 
-  const filteredProducts = (products ?? []).filter((product) => {
+  const filteredProducts = (products ?? []).filter((product: Product) => {
     if (!product.isActive) return false;
     if (!selectedCategorySlug) return true;
     return matchingCategoryIds.has(product.categoryId);
@@ -55,7 +54,11 @@ export default function CustomerProductsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProducts.map((product: Product) => (
-              <Link key={product.id} href={`/product/${product.id}`} className="group border border-border bg-card flex flex-col">
+              <Link
+                key={product.id}
+                href={`/product/${product.id}`}
+                className="group border border-border bg-card flex flex-col transition-all hover:border-foreground/20"
+              >
                 <div className="aspect-[4/3] bg-muted border-b border-border relative overflow-hidden">
                   {product.imageUrl ? (
                     <img
