@@ -14,6 +14,7 @@ function mapProduct(product: any, categoryName: string) {
     ...product,
     price: Number(product.price ?? 0),
     categoryName,
+    images: Array.isArray(product.images) ? product.images : (product.imageUrl ? [product.imageUrl] : []),
     createdAt:
       product.createdAt instanceof Date
         ? product.createdAt.toISOString()
@@ -41,7 +42,6 @@ router.get("/", async (req, res): Promise<void> => {
     res.json(formattedProducts);
   } catch (error: any) {
     req.log?.error?.({ error }, "Error fetching products");
-    
     res.status(500).json({ 
       error: "Failed to fetch products",
       message: error?.message || String(error),
@@ -50,7 +50,7 @@ router.get("/", async (req, res): Promise<void> => {
   }
 });
 
-// 2. GET SINGLE PRODUCT BY ID (Fixes GET /api/products/:id 404)
+// 2. GET SINGLE PRODUCT BY ID
 router.get("/:id", async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
@@ -83,7 +83,7 @@ router.get("/:id", async (req, res): Promise<void> => {
   }
 });
 
-// 3. CREATE PRODUCT (POST /api/products)
+// 3. CREATE PRODUCT
 router.post("/", async (req, res): Promise<void> => {
   const parsed = CreateProductBody.safeParse(req.body);
   if (!parsed.success) {
@@ -92,9 +92,15 @@ router.post("/", async (req, res): Promise<void> => {
   }
 
   try {
+    const imagesArray = Array.isArray(parsed.data.images) && parsed.data.images.length > 0
+      ? parsed.data.images
+      : (parsed.data.imageUrl ? [parsed.data.imageUrl] : []);
+
     const insertPayload = {
       ...parsed.data,
       price: String(parsed.data.price),
+      imageUrl: imagesArray[0] || parsed.data.imageUrl || "",
+      images: imagesArray,
       categoryId: parsed.data.categoryId ? Number(parsed.data.categoryId) : 1,
       stock: parsed.data.stock ? Number(parsed.data.stock) : 0,
       sizes: Array.isArray(parsed.data.sizes) ? parsed.data.sizes : [],
@@ -121,7 +127,7 @@ router.post("/", async (req, res): Promise<void> => {
   }
 });
 
-// 4. UPDATE PRODUCT (Fixes PUT /api/products/:id 404)
+// 4. UPDATE PRODUCT
 router.put("/:id", async (req, res): Promise<void> => {
   const paramsParsed = UpdateProductParams.safeParse({
     id: Number(req.params.id),
@@ -148,6 +154,9 @@ router.put("/:id", async (req, res): Promise<void> => {
     }
     if (updatePayload.stock !== undefined) {
       updatePayload.stock = Number(updatePayload.stock);
+    }
+    if (Array.isArray(updatePayload.images) && updatePayload.images.length > 0) {
+      updatePayload.imageUrl = updatePayload.images[0];
     }
 
     const [updated] = await db
@@ -176,7 +185,7 @@ router.put("/:id", async (req, res): Promise<void> => {
   }
 });
 
-// 5. DELETE PRODUCT (DELETE /api/products/:id)
+// 5. DELETE PRODUCT
 router.delete("/:id", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) {

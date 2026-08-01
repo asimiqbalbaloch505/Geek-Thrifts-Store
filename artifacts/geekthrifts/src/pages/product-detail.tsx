@@ -25,6 +25,47 @@ const TIE_WIDTH_GUIDE = [
   { label: "Skinny", inches: 'Under 2"', cm: "Under 5 cm", for: "Fashion-forward, very slim lapels" },
 ];
 
+function ProductImageGallery({ images, name, isCompletelyOutOfStock, totalStock }: { images: string[]; name: string; isCompletelyOutOfStock: boolean; totalStock: number }) {
+  const displayImages = images.length > 0 ? images : [];
+
+  if (displayImages.length === 0) {
+    return (
+      <div className="w-full aspect-[4/5] bg-gray-50 flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest border border-gray-100 rounded-sm">
+        No Image
+      </div>
+    );
+  }
+
+  return (
+    <div className={`grid gap-4 ${displayImages.length > 1 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+      {displayImages.map((imgUrl, idx) => (
+        <div 
+          key={idx} 
+          className="relative aspect-[4/5] bg-gray-50 overflow-hidden group rounded-sm cursor-zoom-in border border-gray-100"
+        >
+          <img
+            src={getImageUrl(imgUrl)}
+            alt={`${name} view ${idx + 1}`}
+            className="w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-125"
+          />
+          {idx === 0 && isCompletelyOutOfStock && (
+            <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+              <span className="text-[13px] uppercase tracking-widest font-semibold text-gray-700">
+                Out of Stock
+              </span>
+            </div>
+          )}
+          {idx === 0 && !isCompletelyOutOfStock && totalStock <= 2 && (
+            <span className="absolute top-3 left-3 bg-gray-900 text-white text-[10px] px-2.5 py-1 uppercase tracking-wider font-semibold z-10">
+              Last {totalStock}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function TieSizeGuide() {
   const [open, setOpen] = useState(false);
   return (
@@ -258,6 +299,14 @@ export default function ProductDetail() {
 
   const isCompletelyOutOfStock = totalStock === 0;
 
+  // Extract array of images or fall back to single imageUrl
+  const productImages: string[] = 
+    Array.isArray((product as any).images) && (product as any).images.length > 0
+      ? (product as any).images
+      : product.imageUrl 
+      ? [product.imageUrl] 
+      : [];
+
   return (
     <Layout>
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 md:py-12">
@@ -278,31 +327,14 @@ export default function ProductDetail() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-start">
-          {/* Full Cover Image Container */}
-          <div className="w-full max-h-[500px] lg:max-h-[550px] aspect-[4/5] relative overflow-hidden rounded-sm flex items-center justify-center">
-            {product.imageUrl ? (
-              <img
-                src={getImageUrl(product.imageUrl)}
-                alt={product.name}
-                className="w-full h-full object-cover object-center"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300 text-xs uppercase tracking-widest">
-                No Image
-              </div>
-            )}
-            {isCompletelyOutOfStock && (
-              <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                <span className="text-[13px] uppercase tracking-widest font-semibold text-gray-700">
-                  Out of Stock
-                </span>
-              </div>
-            )}
-            {!isCompletelyOutOfStock && totalStock <= 2 && (
-              <span className="absolute top-3 left-3 bg-gray-900 text-white text-[10px] px-2.5 py-1 uppercase tracking-wider font-semibold">
-                Last {totalStock}
-              </span>
-            )}
+          {/* Dynamic Multi-Image Gallery Container */}
+          <div className="w-full">
+            <ProductImageGallery 
+              images={productImages} 
+              name={product.name} 
+              isCompletelyOutOfStock={isCompletelyOutOfStock}
+              totalStock={totalStock}
+            />
           </div>
 
           {/* Product Info - Sticky sidebar for desktop */}

@@ -10,6 +10,7 @@ export const productsTable = pgTable("products", {
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
   imageUrl: text("image_url"),
+  images: text("images").array().notNull().default([]), // <--- Multi-image array support
   categoryId: integer("category_id").notNull(),
   sizes: text("sizes").array().notNull().default([]),
   widths: text("widths").array().notNull().default([]),

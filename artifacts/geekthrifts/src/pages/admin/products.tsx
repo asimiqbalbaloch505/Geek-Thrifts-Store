@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
-import { Edit, Plus, Trash2, Upload, Link as LinkIcon, Loader2 } from "lucide-react";
+import { Edit, Plus, Trash2, Upload, Link as LinkIcon, Loader2, X } from "lucide-react";
 
 type SizeInventoryItem = { size: string; qty: number };
 
@@ -56,7 +56,8 @@ const productSchema = z.object({
   name: z.string().min(2, "Name is required"),
   description: z.string().optional(),
   price: z.coerce.number().min(1, "Price must be greater than 0"),
-  imageUrl: z.string().min(1, "Product image is required"),
+  imageUrl: z.string().optional(),
+  images: z.array(z.string()).min(1, "At least one product image is required"),
   categoryId: z.coerce.number().min(1, "Category is required"),
   sizes: z.array(z.string()),
   sizeInventory: z.array(sizeInventoryItemSchema),
@@ -72,10 +73,17 @@ export default function AdminProducts() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Image handling state
-  const [imageMode, setImageMode] = useState<"upload" | "url">("upload");
-  const [isUploading, setIsUploading] = useState(false);
+  // Multi-image upload states
+  const [uploadingSlots, setUploadingSlots] = useState<{ [key: number]: boolean }>({});
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  const [imageModes, setImageModes] = useState<{ [key: number]: "upload" | "url" }>({
+    0: "upload",
+    1: "upload",
+    2: "upload",
+    3: "upload",
+    4: "upload",
+  });
 
   const { data: products, isLoading } = useListProducts(undefined, {
     query: { queryKey: getListProductsQueryKey() },
@@ -96,6 +104,7 @@ export default function AdminProducts() {
       description: "",
       price: 0,
       imageUrl: "",
+      images: [],
       categoryId: 0,
       sizes: [],
       sizeInventory: [],
@@ -107,7 +116,7 @@ export default function AdminProducts() {
 
   const watchedCategoryId = useWatch({ control: form.control, name: "categoryId" });
   const watchedSizeInventory = useWatch({ control: form.control, name: "sizeInventory" });
-  const watchedImageUrl = useWatch({ control: form.control, name: "imageUrl" });
+  const watchedImages = useWatch({ control: form.control, name: "images" }) || [];
 
   const getAvailableSizesForCategory = (catId: number, catList?: Category[]): string[] => {
     if (!catId || !catList) return [];
@@ -141,12 +150,13 @@ export default function AdminProducts() {
   const openAddDialog = () => {
     setEditingProduct(null);
     setUploadError(null);
-    setImageMode("upload");
+    setActiveImageIndex(0);
     form.reset({
       name: "",
       description: "",
       price: 0,
       imageUrl: "",
+      images: [],
       categoryId: categories?.[0]?.id || 0,
       sizes: [],
       sizeInventory: [],
@@ -157,16 +167,21 @@ export default function AdminProducts() {
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (product: Product) => {
+  const openEditDialog = (product: Product & { images?: string[] }) => {
     setEditingProduct(product);
     setUploadError(null);
-    setImageMode(product.imageUrl ? "url" : "upload");
+    setActiveImageIndex(0);
     const inv = (product.sizeInventory ?? []) as SizeInventoryItem[];
+    const productImages = product.images && product.images.length > 0
+      ? product.images
+      : (product.imageUrl ? [product.imageUrl] : []);
+
     form.reset({
       name: product.name,
       description: product.description || "",
       price: product.price,
       imageUrl: product.imageUrl || "",
+      images: productImages,
       categoryId: product.categoryId,
       sizes: inv.map((s) => s.size),
       sizeInventory: inv,
@@ -177,12 +192,12 @@ export default function AdminProducts() {
     setIsDialogOpen(true);
   };
 
-  // Upload image to Supabase Bucket
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload image slot to Supabase
+  const handleFileUploadForIndex = async (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setIsUploading(true);
+    setUploadingSlots((prev) => ({ ...prev, [index]: true }));
     setUploadError(null);
 
     try {
@@ -200,12 +215,32 @@ export default function AdminProducts() {
         .from("product-images")
         .getPublicUrl(filePath);
 
-      form.setValue("imageUrl", publicUrl, { shouldValidate: true });
+      const currentImages = [...(form.getValues("images") || [])];
+      currentImages[index] = publicUrl;
+      form.setValue("images", currentImages.filter(Boolean), { shouldValidate: true });
+      form.setValue("imageUrl", currentImages[0] || "");
     } catch (err: any) {
       setUploadError(err?.message || "Failed to upload image.");
     } finally {
-      setIsUploading(false);
+      setUploadingSlots((prev) => ({ ...prev, [index]: false }));
     }
+  };
+
+  const removeImageAtIndex = (index: number) => {
+    const currentImages = [...(form.getValues("images") || [])];
+    currentImages.splice(index, 1);
+    form.setValue("images", currentImages, { shouldValidate: true });
+    form.setValue("imageUrl", currentImages[0] || "");
+    if (activeImageIndex >= currentImages.length) {
+      setActiveImageIndex(Math.max(0, currentImages.length - 1));
+    }
+  };
+
+  const updateImageUrlAtIndex = (url: string, index: number) => {
+    const currentImages = [...(form.getValues("images") || [])];
+    currentImages[index] = url;
+    form.setValue("images", currentImages, { shouldValidate: true });
+    form.setValue("imageUrl", currentImages[0] || "");
   };
 
   const handleDelete = (id: number) => {
@@ -238,7 +273,11 @@ export default function AdminProducts() {
     const finalStock = hasSizes
       ? values.sizeInventory.reduce((sum, s) => sum + s.qty, 0)
       : values.stock;
-    const payload = { ...values, stock: finalStock };
+    const payload = {
+      ...values,
+      stock: finalStock,
+      imageUrl: values.images[0] || values.imageUrl || "",
+    };
 
     if (editingProduct) {
       updateProduct.mutate({ id: editingProduct.id, data: payload }, {
@@ -256,6 +295,8 @@ export default function AdminProducts() {
       });
     }
   };
+
+  const isAnyUploading = Object.values(uploadingSlots).some(Boolean);
 
   return (
     <AdminLayout>
@@ -390,7 +431,6 @@ export default function AdminProducts() {
                     />
                   </div>
 
-                  {/* Sizes and Inventory Selection */}
                   {hasSizes ? (
                     <div>
                       <p className="text-xs uppercase tracking-widest font-bold mb-2">Sizes &amp; Stock</p>
@@ -453,78 +493,128 @@ export default function AdminProducts() {
                   )}
                 </div>
 
-                {/* Right Column - Image & Meta */}
+                {/* Right Column - Multi-Image Manager */}
                 <div className="space-y-5">
-                  <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={() => (
-                      <FormItem>
-                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Image</FormLabel>
-                        
-                        <div className="flex gap-2 mb-2">
-                          <Button
-                            type="button"
-                            variant={imageMode === "upload" ? "default" : "outline"}
-                            size="sm"
-                            className="rounded-none text-[10px] uppercase tracking-widest h-8"
-                            onClick={() => setImageMode("upload")}
-                          >
-                            <Upload className="w-3 h-3 mr-1" /> File Upload
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={imageMode === "url" ? "default" : "outline"}
-                            size="sm"
-                            className="rounded-none text-[10px] uppercase tracking-widest h-8"
-                            onClick={() => setImageMode("url")}
-                          >
-                            <LinkIcon className="w-3 h-3 mr-1" /> External URL
-                          </Button>
-                        </div>
+                  <div>
+                    <FormLabel className="text-xs uppercase tracking-widest font-bold block mb-2">
+                      Product Images ({watchedImages.length}/5)
+                    </FormLabel>
 
-                        {imageMode === "upload" ? (
-                          <div className="space-y-2">
-                            <FormControl>
-                              <Input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleFileUpload}
-                                disabled={isUploading}
-                                className="rounded-none border-border text-xs cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-none file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                              />
-                            </FormControl>
-                            {isUploading && (
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Loader2 className="w-3 h-3 animate-spin" /> Uploading to bucket...
+                    {/* Image slot selector tabs */}
+                    <div className="flex gap-1 mb-3">
+                      {[0, 1, 2, 3, 4].map((idx) => {
+                        const hasImg = Boolean(watchedImages[idx]);
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setActiveImageIndex(idx)}
+                            className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-wider border transition-colors ${
+                              activeImageIndex === idx
+                                ? "border-foreground bg-foreground text-background"
+                                : hasImg
+                                ? "border-border bg-muted text-foreground"
+                                : "border-dashed border-border text-muted-foreground"
+                            }`}
+                          >
+                            Image {idx + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Upload or URL switcher for active index */}
+                    <div className="flex gap-2 mb-3">
+                      <Button
+                        type="button"
+                        variant={imageModes[activeImageIndex] === "upload" ? "default" : "outline"}
+                        size="sm"
+                        className="rounded-none text-[10px] uppercase tracking-widest h-8"
+                        onClick={() =>
+                          setImageModes((prev) => ({ ...prev, [activeImageIndex]: "upload" }))
+                        }
+                      >
+                        <Upload className="w-3 h-3 mr-1" /> File Upload
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={imageModes[activeImageIndex] === "url" ? "default" : "outline"}
+                        size="sm"
+                        className="rounded-none text-[10px] uppercase tracking-widest h-8"
+                        onClick={() =>
+                          setImageModes((prev) => ({ ...prev, [activeImageIndex]: "url" }))
+                        }
+                      >
+                        <LinkIcon className="w-3 h-3 mr-1" /> External URL
+                      </Button>
+                    </div>
+
+                    {/* Input control according to mode */}
+                    {imageModes[activeImageIndex] === "upload" ? (
+                      <div className="space-y-2">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileUploadForIndex(e, activeImageIndex)}
+                          disabled={uploadingSlots[activeImageIndex]}
+                          className="rounded-none border-border text-xs cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-none file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                        />
+                        {uploadingSlots[activeImageIndex] && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Uploading image {activeImageIndex + 1}...
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Input
+                        className="rounded-none border-border text-xs"
+                        placeholder="https://..."
+                        value={watchedImages[activeImageIndex] || ""}
+                        onChange={(e) => updateImageUrlAtIndex(e.target.value, activeImageIndex)}
+                      />
+                    )}
+
+                    {/* Thumbnail Grid Preview */}
+                    <div className="grid grid-cols-5 gap-2 mt-4">
+                      {[0, 1, 2, 3, 4].map((idx) => {
+                        const img = watchedImages[idx];
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => setActiveImageIndex(idx)}
+                            className={`aspect-square bg-muted border relative group cursor-pointer overflow-hidden ${
+                              activeImageIndex === idx ? "ring-2 ring-primary" : "border-border"
+                            }`}
+                          >
+                            {img ? (
+                              <>
+                                <img src={getImageUrl(img)} alt={`Slot ${idx + 1}`} className="w-full h-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeImageAtIndex(idx);
+                                  }}
+                                  className="absolute top-0.5 right-0.5 bg-background/80 text-foreground p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground font-bold">
+                                +{idx + 1}
                               </div>
                             )}
                           </div>
-                        ) : (
-                          <FormControl>
-                            <Input
-                              className="rounded-none border-border text-xs"
-                              placeholder="https://..."
-                              value={watchedImageUrl}
-                              onChange={(e) => form.setValue("imageUrl", e.target.value, { shouldValidate: true })}
-                            />
-                          </FormControl>
-                        )}
+                        );
+                      })}
+                    </div>
 
-                        {watchedImageUrl && (
-                          <div className="mt-3 aspect-video bg-muted border border-border overflow-hidden relative">
-                            <img src={getImageUrl(watchedImageUrl)} alt="Preview" className="w-full h-full object-cover" />
-                          </div>
-                        )}
-
-                        {uploadError && (
-                          <p className="text-[10px] text-destructive font-bold mt-1">{uploadError}</p>
-                        )}
-
-                        <FormMessage className="text-[10px]"/>
-                      </FormItem>
+                    {uploadError && (
+                      <p className="text-[10px] text-destructive font-bold mt-2">{uploadError}</p>
                     )}
-                  />
+                    <FormMessage className="text-[10px] mt-1" />
+                  </div>
 
                   <FormField
                     control={form.control}
@@ -568,7 +658,7 @@ export default function AdminProducts() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="rounded-none uppercase font-bold text-xs tracking-widest">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending || isUploading} className="rounded-none uppercase font-bold text-xs tracking-widest px-8">
+                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending || isAnyUploading} className="rounded-none uppercase font-bold text-xs tracking-widest px-8">
                   {editingProduct ? "Update Product" : "Create Product"}
                 </Button>
               </div>
