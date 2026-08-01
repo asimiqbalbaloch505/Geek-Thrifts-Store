@@ -1,5 +1,5 @@
 import { Layout } from "@/components/layout";
-import { useGetProduct, getGetProductQueryKey } from "@workspace/api-client-react";
+import { useGetProduct, getGetProductQueryKey, useListProducts, Product } from "@workspace/api-client-react";
 import { useParams, Link } from "wouter";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -133,6 +133,8 @@ export default function ProductDetail() {
     query: { enabled: !!productId, queryKey: getGetProductQueryKey(productId) },
   });
 
+  const { data: allProducts } = useListProducts();
+
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [quantity, setQuantity] = useState(1);
 
@@ -152,6 +154,20 @@ export default function ProductDetail() {
       }
     }
   }, [hasSizeInventory, sizeInventory]);
+
+  // Compute related products for "You May Also Like"
+  const relatedProducts = useMemo(() => {
+    if (!product || !allProducts) return [];
+    return allProducts
+      .filter(
+        (p: Product) =>
+          p.id !== product.id &&
+          p.isActive !== false &&
+          (p.categoryId === product.categoryId ||
+            p.categoryName?.toLowerCase() === product.categoryName?.toLowerCase())
+      )
+      .slice(0, 4);
+  }, [product, allProducts]);
 
   const totalStock = product?.stock ?? 0;
 
@@ -427,6 +443,51 @@ export default function ProductDetail() {
             </div>
           </div>
         </div>
+
+        {/* You May Also Like Section */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-20 pt-12 border-t border-gray-100">
+            <h2 className="font-serif text-2xl font-bold tracking-tight text-gray-900 mb-6 uppercase">
+              You May Also Like
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              {relatedProducts.map((relProduct: Product) => (
+                <Link
+                  key={relProduct.id}
+                  href={`/product/${relProduct.id}`}
+                  className="group border border-gray-100 bg-white flex flex-col transition-all hover:border-gray-300"
+                >
+                  <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden">
+                    {relProduct.imageUrl ? (
+                      <img
+                        src={getImageUrl(relProduct.imageUrl)}
+                        alt={relProduct.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[10px] uppercase text-gray-300 font-bold tracking-widest">
+                        No Image
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold block mb-1">
+                        {relProduct.categoryName || "Geek Thrifts"}
+                      </span>
+                      <h3 className="font-serif font-bold text-base leading-tight mb-2 group-hover:underline truncate text-gray-900">
+                        {relProduct.name}
+                      </h3>
+                    </div>
+                    <div className="font-bold text-sm mt-2 text-gray-900">
+                      {formatPKR(relProduct.price)}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

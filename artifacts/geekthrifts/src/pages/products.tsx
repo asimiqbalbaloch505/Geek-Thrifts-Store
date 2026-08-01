@@ -6,27 +6,41 @@ import { Layout } from "@/components/layout";
 export default function CustomerProductsPage() {
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
-  const selectedCategorySlug = searchParams.get("category");
+  const selectedCategorySlug = searchParams.get("category")?.toLowerCase();
 
   const { data: products, isLoading: loadingProducts } = useListProducts();
   const { data: categories } = useListCategories();
 
+  // Find currently selected category
   const activeCategory = categories?.find(
-    (c: Category) => c.slug?.toLowerCase() === selectedCategorySlug?.toLowerCase()
+    (c: Category) => c.slug?.toLowerCase() === selectedCategorySlug
   );
 
+  // Identify main parent category (if active category is a subcategory, resolve to parent)
+  const mainCategory = activeCategory?.parentId
+    ? categories?.find((c: Category) => c.id === activeCategory.parentId) || activeCategory
+    : activeCategory;
+
+  // Gather all matching category IDs (Main Category + All Subcategories under it)
   const matchingCategoryIds = new Set<number>();
-  if (activeCategory) {
-    matchingCategoryIds.add(activeCategory.id);
+  if (mainCategory) {
+    matchingCategoryIds.add(mainCategory.id);
     categories
-      ?.filter((c: Category) => c.parentId === activeCategory.id)
+      ?.filter((c: Category) => c.parentId === mainCategory.id)
       .forEach((child: Category) => matchingCategoryIds.add(child.id));
   }
 
   const filteredProducts = (products ?? []).filter((product: Product) => {
     if (!product.isActive) return false;
     if (!selectedCategorySlug) return true;
-    return matchingCategoryIds.has(product.categoryId);
+    
+    // Fallback: match by Category ID OR string matching on categoryName for resilience
+    const matchesId = matchingCategoryIds.has(product.categoryId);
+    const matchesName =
+      mainCategory &&
+      product.categoryName?.toLowerCase().includes(mainCategory.name.toLowerCase());
+
+    return matchesId || matchesName;
   });
 
   return (
@@ -34,11 +48,11 @@ export default function CustomerProductsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 border-b border-border pb-6">
           <h1 className="font-serif text-3xl font-bold uppercase tracking-tighter mb-2">
-            {activeCategory ? activeCategory.name : "All Products"}
+            {mainCategory ? mainCategory.name : "All Products"}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {activeCategory
-              ? `Browse products under ${activeCategory.name}`
+            {mainCategory
+              ? `Showing all products in ${mainCategory.name}`
               : "Browse our complete thrift and geek collection."}
           </p>
         </div>
