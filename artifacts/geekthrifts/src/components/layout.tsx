@@ -139,6 +139,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }));
   }, [allCategories]);
 
+  // Static Help & Information Links
+  const helpLinks = [
+    { label: "FAQs", href: "/faqs" },
+    { label: "Order Status", href: "/order-status" },
+    { label: "Shipping", href: "/shipping" },
+    { label: "Return Policy", href: "/return-policy" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900 font-sans">
       {/* Announcement */}
@@ -283,8 +292,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </div>
                 ))}
 
+                {/* Mobile Customer Service Quick Links */}
+                <div className="mt-2 pt-2 border-b border-gray-100 pb-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 my-2">Customer Care</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {helpLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMobileOpen(false)}
+                        className="text-[12px] text-gray-600 hover:text-black py-1"
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Mobile Auth / Account Section */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="mt-4 pt-2">
                   {isUserLoggedIn && user ? (
                     <div className="bg-gray-50 p-3.5 rounded-sm">
                       <div className="flex items-center gap-2 mb-2">
@@ -337,6 +363,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-100 mt-8">
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-6">
+          {/* Dynamic Database Categories */}
           {navItems.map((cat) => (
             <div key={cat.id}>
               <Link href={`/products?category=${cat.slug}`}>
@@ -353,6 +380,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </ul>
             </div>
           ))}
+
+          {/* Static Help & Information Section */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-900 mb-3">Customer Care</p>
+            <ul className="space-y-2">
+              {helpLinks.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href}>
+                    <span className="text-[12px] text-gray-500 hover:text-black uppercase tracking-[0.06em] transition-colors cursor-pointer">{link.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <div className="border-t border-gray-100 py-4 px-4">
