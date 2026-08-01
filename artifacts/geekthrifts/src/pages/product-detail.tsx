@@ -278,16 +278,16 @@ export default function ProductDetail() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-start">
-          {/* Image Container with Controlled Height */}
-          <div className="w-full max-h-[500px] lg:max-h-[550px] aspect-[4/5] bg-gray-50 relative overflow-hidden rounded-sm border border-gray-100 flex items-center justify-center">
+          {/* Full Cover Image Container */}
+          <div className="w-full max-h-[500px] lg:max-h-[550px] aspect-[4/5] relative overflow-hidden rounded-sm flex items-center justify-center">
             {product.imageUrl ? (
               <img
                 src={getImageUrl(product.imageUrl)}
                 alt={product.name}
-                className="w-full h-full object-contain object-center p-2"
+                className="w-full h-full object-cover object-center"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest">
+              <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300 text-xs uppercase tracking-widest">
                 No Image
               </div>
             )}
