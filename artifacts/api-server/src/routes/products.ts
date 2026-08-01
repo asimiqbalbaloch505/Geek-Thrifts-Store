@@ -14,7 +14,11 @@ function mapProduct(product: any, categoryName: string) {
     ...product,
     price: Number(product.price ?? 0),
     categoryName,
-    images: Array.isArray(product.images) ? product.images : (product.imageUrl ? [product.imageUrl] : []),
+    images: Array.isArray(product.images)
+      ? product.images
+      : product.imageUrl
+      ? [product.imageUrl]
+      : [],
     createdAt:
       product.createdAt instanceof Date
         ? product.createdAt.toISOString()
@@ -33,7 +37,10 @@ router.get("/", async (req, res): Promise<void> => {
         categoryName: categoriesTable.name,
       })
       .from(productsTable)
-      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id));
+      .leftJoin(
+        categoriesTable,
+        eq(productsTable.categoryId, categoriesTable.id)
+      );
 
     const formattedProducts = productsList.map(({ product, categoryName }) =>
       mapProduct(product, categoryName ?? "Uncategorized")
@@ -42,10 +49,10 @@ router.get("/", async (req, res): Promise<void> => {
     res.json(formattedProducts);
   } catch (error: any) {
     req.log?.error?.({ error }, "Error fetching products");
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Failed to fetch products",
       message: error?.message || String(error),
-      code: error?.code
+      code: error?.code,
     });
   }
 });
@@ -65,7 +72,10 @@ router.get("/:id", async (req, res): Promise<void> => {
         categoryName: categoriesTable.name,
       })
       .from(productsTable)
-      .leftJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+      .leftJoin(
+        categoriesTable,
+        eq(productsTable.categoryId, categoriesTable.id)
+      )
       .where(eq(productsTable.id, id));
 
     if (!row) {
@@ -92,9 +102,12 @@ router.post("/", async (req, res): Promise<void> => {
   }
 
   try {
-    const imagesArray = Array.isArray(parsed.data.images) && parsed.data.images.length > 0
-      ? parsed.data.images
-      : (parsed.data.imageUrl ? [parsed.data.imageUrl] : []);
+    const imagesArray =
+      Array.isArray(parsed.data.images) && parsed.data.images.length > 0
+        ? parsed.data.images
+        : parsed.data.imageUrl
+        ? [parsed.data.imageUrl]
+        : [];
 
     const insertPayload = {
       ...parsed.data,

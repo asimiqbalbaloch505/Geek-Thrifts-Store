@@ -172,9 +172,12 @@ export default function AdminProducts() {
     setUploadError(null);
     setActiveImageIndex(0);
     const inv = (product.sizeInventory ?? []) as SizeInventoryItem[];
-    const productImages = product.images && product.images.length > 0
-      ? product.images
-      : (product.imageUrl ? [product.imageUrl] : []);
+    const productImages =
+      product.images && product.images.length > 0
+        ? product.images
+        : product.imageUrl
+        ? [product.imageUrl]
+        : [];
 
     form.reset({
       name: product.name,
@@ -193,7 +196,10 @@ export default function AdminProducts() {
   };
 
   // Upload image slot to Supabase
-  const handleFileUploadForIndex = async (event: React.ChangeEvent<HTMLInputElement>, index: number) => {
+  const handleFileUploadForIndex = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    index: number
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -211,9 +217,9 @@ export default function AdminProducts() {
 
       if (uploadErr) throw uploadErr;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("product-images")
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("product-images").getPublicUrl(filePath);
 
       const currentImages = [...(form.getValues("images") || [])];
       currentImages[index] = publicUrl;
@@ -245,9 +251,12 @@ export default function AdminProducts() {
 
   const handleDelete = (id: number) => {
     if (confirm("Are you sure you want to delete this product?")) {
-      deleteProduct.mutate({ id }, {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() }),
-      });
+      deleteProduct.mutate(
+        { id },
+        {
+          onSuccess: () => queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() }),
+        }
+      );
     }
   };
 
@@ -266,7 +275,10 @@ export default function AdminProducts() {
 
   const updateQty = (size: string, qty: number) => {
     const current = form.getValues("sizeInventory") || [];
-    form.setValue("sizeInventory", current.map((s) => (s.size === size ? { ...s, qty } : s)));
+    form.setValue(
+      "sizeInventory",
+      current.map((s) => (s.size === size ? { ...s, qty } : s))
+    );
   };
 
   const onSubmit = (values: ProductValues) => {
@@ -280,19 +292,25 @@ export default function AdminProducts() {
     };
 
     if (editingProduct) {
-      updateProduct.mutate({ id: editingProduct.id, data: payload }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
-          setIsDialogOpen(false);
-        },
-      });
+      updateProduct.mutate(
+        { id: editingProduct.id, data: payload },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+            setIsDialogOpen(false);
+          },
+        }
+      );
     } else {
-      createProduct.mutate({ data: payload }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
-          setIsDialogOpen(false);
-        },
-      });
+      createProduct.mutate(
+        { data: payload },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+            setIsDialogOpen(false);
+          },
+        }
+      );
     }
   };
 
@@ -305,51 +323,87 @@ export default function AdminProducts() {
           <h1 className="font-serif text-3xl font-bold uppercase tracking-tighter mb-2">Products</h1>
           <p className="text-muted-foreground text-sm">Manage inventory and catalog.</p>
         </div>
-        <Button className="rounded-none uppercase font-bold tracking-widest text-xs h-10 px-6 flex gap-2" onClick={openAddDialog}>
-          <Plus className="w-4 h-4"/> Add Product
+        <Button
+          className="rounded-none uppercase font-bold tracking-widest text-xs h-10 px-6 flex gap-2"
+          onClick={openAddDialog}
+        >
+          <Plus className="w-4 h-4" /> Add Product
         </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {isLoading ? (
-          <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">Loading...</div>
+          <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">
+            Loading...
+          </div>
         ) : !products || products.length === 0 ? (
-          <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">No products found</div>
+          <div className="col-span-full p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest border border-border">
+            No products found
+          </div>
         ) : (
           products.map((product) => {
             const inv = (product.sizeInventory ?? []) as SizeInventoryItem[];
-            const displaySizes = inv.length > 0
-              ? inv.map((s) => `${s.size}(${s.qty})`).join(", ")
-              : product.stock > 0 ? `Qty: ${product.stock}` : "Out of Stock";
+            const displaySizes =
+              inv.length > 0
+                ? inv.map((s) => `${s.size}(${s.qty})`).join(", ")
+                : product.stock > 0
+                ? `Qty: ${product.stock}`
+                : "Out of Stock";
             return (
               <div key={product.id} className="border border-border bg-card flex flex-col group">
                 <div className="aspect-[4/3] bg-muted border-b border-border relative">
                   {product.imageUrl ? (
-                    <img src={getImageUrl(product.imageUrl)} alt={product.name} className="w-full h-full object-cover" />
+                    <img
+                      src={getImageUrl(product.imageUrl)}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[10px] uppercase text-muted-foreground font-bold tracking-widest">No Image</div>
+                    <div className="w-full h-full flex items-center justify-center text-[10px] uppercase text-muted-foreground font-bold tracking-widest">
+                      No Image
+                    </div>
                   )}
                   {!product.isActive && (
-                    <div className="absolute top-2 left-2 bg-muted-foreground text-background text-[10px] font-bold uppercase tracking-widest px-2 py-1">Draft</div>
+                    <div className="absolute top-2 left-2 bg-muted-foreground text-background text-[10px] font-bold uppercase tracking-widest px-2 py-1">
+                      Draft
+                    </div>
                   )}
                   {product.isFeatured && (
-                    <div className="absolute top-2 right-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest px-2 py-1">Featured</div>
+                    <div className="absolute top-2 right-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest px-2 py-1">
+                      Featured
+                    </div>
                   )}
                   <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
-                    <Button className="rounded-none h-10 w-10 bg-background border-border" onClick={() => openEditDialog(product)} size="icon" variant="outline">
-                      <Edit className="w-4 h-4"/>
+                    <Button
+                      className="rounded-none h-10 w-10 bg-background border-border"
+                      onClick={() => openEditDialog(product)}
+                      size="icon"
+                      variant="outline"
+                    >
+                      <Edit className="w-4 h-4" />
                     </Button>
-                    <Button className="rounded-none h-10 w-10" onClick={() => handleDelete(product.id)} size="icon" variant="destructive">
-                      <Trash2 className="w-4 h-4"/>
+                    <Button
+                      className="rounded-none h-10 w-10"
+                      onClick={() => handleDelete(product.id)}
+                      size="icon"
+                      variant="destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
                 <div className="p-4 font-sans flex-1 flex flex-col">
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">{product.categoryName}</div>
-                  <div className="font-serif font-bold text-lg leading-tight mb-2 truncate">{product.name}</div>
+                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">
+                    {product.categoryName}
+                  </div>
+                  <div className="font-serif font-bold text-lg leading-tight mb-2 truncate">
+                    {product.name}
+                  </div>
                   <div className="font-bold text-sm mb-4">{formatPKR(product.price)}</div>
                   <div className="mt-auto text-xs text-muted-foreground border-t border-border pt-4">
-                    <div className="uppercase tracking-widest font-bold truncate">{displaySizes}</div>
+                    <div className="uppercase tracking-widest font-bold truncate">
+                      {displaySizes}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -377,9 +431,13 @@ export default function AdminProducts() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Product Name</FormLabel>
-                        <FormControl><Input className="rounded-none border-border" {...field}/></FormControl>
-                        <FormMessage className="text-[10px]"/>
+                        <FormLabel className="text-xs uppercase tracking-widest font-bold">
+                          Product Name
+                        </FormLabel>
+                        <FormControl>
+                          <Input className="rounded-none border-border" {...field} />
+                        </FormControl>
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
@@ -390,9 +448,17 @@ export default function AdminProducts() {
                       name="price"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Price (PKR)</FormLabel>
-                          <FormControl><Input className="rounded-none border-border" type="number" {...field}/></FormControl>
-                          <FormMessage className="text-[10px]"/>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold">
+                            Price (PKR)
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="rounded-none border-border"
+                              type="number"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px]" />
                         </FormItem>
                       )}
                     />
@@ -402,20 +468,26 @@ export default function AdminProducts() {
                       name="categoryId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Category</FormLabel>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold">
+                            Category
+                          </FormLabel>
                           <Select
                             value={field.value ? field.value.toString() : ""}
                             onValueChange={(v) => field.onChange(Number(v))}
                           >
                             <FormControl>
                               <SelectTrigger className="rounded-none border-border">
-                                <SelectValue placeholder="Select"/>
+                                <SelectValue placeholder="Select" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="rounded-none">
                               {categories?.map((cat) => {
-                                const parentCat = cat.parentId ? categories.find((p) => p.id === cat.parentId) : null;
-                                const label = parentCat ? `${parentCat.name} / ${cat.name}` : cat.name;
+                                const parentCat = cat.parentId
+                                  ? categories.find((p) => p.id === cat.parentId)
+                                  : null;
+                                const label = parentCat
+                                  ? `${parentCat.name} / ${cat.name}`
+                                  : cat.name;
 
                                 return (
                                   <SelectItem key={cat.id} value={String(cat.id)}>
@@ -425,7 +497,7 @@ export default function AdminProducts() {
                               })}
                             </SelectContent>
                           </Select>
-                          <FormMessage className="text-[10px]"/>
+                          <FormMessage className="text-[10px]" />
                         </FormItem>
                       )}
                     />
@@ -433,15 +505,22 @@ export default function AdminProducts() {
 
                   {hasSizes ? (
                     <div>
-                      <p className="text-xs uppercase tracking-widest font-bold mb-2">Sizes &amp; Stock</p>
-                      <p className="text-[10px] text-muted-foreground mb-3">Check a size to add it. Set quantity for each selected size.</p>
+                      <p className="text-xs uppercase tracking-widest font-bold mb-2">
+                        Sizes &amp; Stock
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mb-3">
+                        Check a size to add it. Set quantity for each selected size.
+                      </p>
                       <div className="space-y-2">
                         {availableSizes.map((size) => {
                           const inv = watchedSizeInventory ?? [];
                           const item = inv.find((s) => s.size === size);
                           const isChecked = !!item;
                           return (
-                            <div key={size} className="flex items-center gap-3 border border-border p-2.5">
+                            <div
+                              key={size}
+                              className="flex items-center gap-3 border border-border p-2.5"
+                            >
                               <Checkbox
                                 checked={isChecked}
                                 className="rounded-none"
@@ -457,14 +536,20 @@ export default function AdminProducts() {
                                       type="number"
                                       min={0}
                                       value={item?.qty ?? 0}
-                                      onChange={(e) => updateQty(size, Number(e.target.value))}
+                                      onChange={(e) =>
+                                        updateQty(size, Number(e.target.value))
+                                      }
                                       className="h-7 w-20 rounded-none border-border text-xs"
                                       placeholder="Qty"
                                     />
-                                    <span className="text-[10px] text-muted-foreground">units</span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      units
+                                    </span>
                                   </>
                                 ) : (
-                                  <span className="text-[10px] text-muted-foreground">Not available</span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    Not available
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -483,10 +568,21 @@ export default function AdminProducts() {
                       name="stock"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs uppercase tracking-widest font-bold">Stock Quantity</FormLabel>
-                          <FormControl><Input className="rounded-none border-border" min={0} type="number" {...field}/></FormControl>
-                          <p className="text-[10px] text-muted-foreground mt-1">This category has no sizes. Enter total available quantity.</p>
-                          <FormMessage className="text-[10px]"/>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold">
+                            Stock Quantity
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              className="rounded-none border-border"
+                              min={0}
+                              type="number"
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            This category has no sizes. Enter total available quantity.
+                          </p>
+                          <FormMessage className="text-[10px]" />
                         </FormItem>
                       )}
                     />
@@ -527,7 +623,9 @@ export default function AdminProducts() {
                     <div className="flex gap-2 mb-3">
                       <Button
                         type="button"
-                        variant={imageModes[activeImageIndex] === "upload" ? "default" : "outline"}
+                        variant={
+                          imageModes[activeImageIndex] === "upload" ? "default" : "outline"
+                        }
                         size="sm"
                         className="rounded-none text-[10px] uppercase tracking-widest h-8"
                         onClick={() =>
@@ -538,7 +636,9 @@ export default function AdminProducts() {
                       </Button>
                       <Button
                         type="button"
-                        variant={imageModes[activeImageIndex] === "url" ? "default" : "outline"}
+                        variant={
+                          imageModes[activeImageIndex] === "url" ? "default" : "outline"
+                        }
                         size="sm"
                         className="rounded-none text-[10px] uppercase tracking-widest h-8"
                         onClick={() =>
@@ -561,7 +661,8 @@ export default function AdminProducts() {
                         />
                         {uploadingSlots[activeImageIndex] && (
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Loader2 className="w-3 h-3 animate-spin" /> Uploading image {activeImageIndex + 1}...
+                            <Loader2 className="w-3 h-3 animate-spin" /> Uploading image{" "}
+                            {activeImageIndex + 1}...
                           </div>
                         )}
                       </div>
@@ -570,7 +671,9 @@ export default function AdminProducts() {
                         className="rounded-none border-border text-xs"
                         placeholder="https://..."
                         value={watchedImages[activeImageIndex] || ""}
-                        onChange={(e) => updateImageUrlAtIndex(e.target.value, activeImageIndex)}
+                        onChange={(e) =>
+                          updateImageUrlAtIndex(e.target.value, activeImageIndex)
+                        }
                       />
                     )}
 
@@ -583,12 +686,18 @@ export default function AdminProducts() {
                             key={idx}
                             onClick={() => setActiveImageIndex(idx)}
                             className={`aspect-square bg-muted border relative group cursor-pointer overflow-hidden ${
-                              activeImageIndex === idx ? "ring-2 ring-primary" : "border-border"
+                              activeImageIndex === idx
+                                ? "ring-2 ring-primary"
+                                : "border-border"
                             }`}
                           >
                             {img ? (
                               <>
-                                <img src={getImageUrl(img)} alt={`Slot ${idx + 1}`} className="w-full h-full object-cover" />
+                                <img
+                                  src={getImageUrl(img)}
+                                  alt={`Slot ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -611,7 +720,9 @@ export default function AdminProducts() {
                     </div>
 
                     {uploadError && (
-                      <p className="text-[10px] text-destructive font-bold mt-2">{uploadError}</p>
+                      <p className="text-[10px] text-destructive font-bold mt-2">
+                        {uploadError}
+                      </p>
                     )}
                     <FormMessage className="text-[10px] mt-1" />
                   </div>
@@ -621,9 +732,16 @@ export default function AdminProducts() {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs uppercase tracking-widest font-bold">Description</FormLabel>
-                        <FormControl><Textarea className="rounded-none border-border min-h-[120px]" {...field}/></FormControl>
-                        <FormMessage className="text-[10px]"/>
+                        <FormLabel className="text-xs uppercase tracking-widest font-bold">
+                          Description
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            className="rounded-none border-border min-h-[120px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-[10px]" />
                       </FormItem>
                     )}
                   />
@@ -634,8 +752,15 @@ export default function AdminProducts() {
                       name="isActive"
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-2 space-y-0">
-                          <FormControl><Switch checked={field.value} onCheckedChange={field.onChange}/></FormControl>
-                          <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Active (Visible)</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">
+                            Active (Visible)
+                          </FormLabel>
                         </FormItem>
                       )}
                     />
@@ -645,8 +770,15 @@ export default function AdminProducts() {
                       name="isFeatured"
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-2 space-y-0">
-                          <FormControl><Switch checked={field.value} onCheckedChange={field.onChange}/></FormControl>
-                          <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">Featured on Home</FormLabel>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormLabel className="text-xs uppercase tracking-widest font-bold cursor-pointer">
+                            Featured on Home
+                          </FormLabel>
                         </FormItem>
                       )}
                     />
@@ -655,10 +787,21 @@ export default function AdminProducts() {
               </div>
 
               <div className="flex justify-end gap-4 border-t border-border pt-6">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="rounded-none uppercase font-bold text-xs tracking-widest">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                  className="rounded-none uppercase font-bold text-xs tracking-widest"
+                >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending || isAnyUploading} className="rounded-none uppercase font-bold text-xs tracking-widest px-8">
+                <Button
+                  type="submit"
+                  disabled={
+                    createProduct.isPending || updateProduct.isPending || isAnyUploading
+                  }
+                  className="rounded-none uppercase font-bold text-xs tracking-widest px-8"
+                >
                   {editingProduct ? "Update Product" : "Create Product"}
                 </Button>
               </div>
