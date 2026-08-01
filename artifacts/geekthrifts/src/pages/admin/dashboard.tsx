@@ -15,6 +15,25 @@ import {
   XCircle
 } from "lucide-react";
 
+/**
+ * Formats a number into a compact string with 'k' or 'M'.
+ * e.g., 6600 -> "Rs. 6.6k", 1000000 -> "Rs. 1M"
+ */
+function formatCompactPKR(amount: number): string {
+  if (amount === undefined || amount === null) return "Rs. 0";
+
+  if (amount >= 1_000_000) {
+    const formatted = (amount / 1_000_000).toFixed(1).replace(/\.0$/, "");
+    return `Rs. ${formatted}M`;
+  }
+  if (amount >= 1_000) {
+    const formatted = (amount / 1_000).toFixed(1).replace(/\.0$/, "");
+    return `Rs. ${formatted}k`;
+  }
+
+  return formatPKR(amount);
+}
+
 export default function AdminDashboard() {
   const { token } = useAuth();
   const authToken = token || localStorage.getItem("adminToken") || localStorage.getItem("token");
@@ -33,8 +52,18 @@ export default function AdminDashboard() {
     }
   );
 
+  const rawRevenue = stats?.totalRevenue ?? 0;
+  const compactRevenue = formatCompactPKR(rawRevenue);
+  const exactRevenue = formatPKR(rawRevenue);
+
   const statCards = [
-    { label: "Total Revenue", value: stats ? formatPKR(stats.totalRevenue) : null, icon: Banknote, span: true },
+    { 
+      label: "Total Revenue", 
+      value: compactRevenue, 
+      subValue: exactRevenue, // Exact figure shown below
+      icon: Banknote, 
+      span: true 
+    },
     { label: "Total Orders", value: stats?.totalOrders, icon: ShoppingBag },
     { label: "Products", value: stats?.totalProducts, icon: PackageOpen },
     { label: "Categories", value: stats?.totalCategories, icon: Tags },
@@ -62,7 +91,19 @@ export default function AdminDashboard() {
             {isLoading ? (
               <Skeleton className="h-8 w-24 rounded-none" />
             ) : (
-              <div className="text-3xl font-bold font-serif tracking-tight">{stat.value}</div>
+              <div>
+                <div 
+                  className="text-3xl font-bold font-serif tracking-tight cursor-default" 
+                  title={stat.subValue ? `Exact: ${stat.subValue}` : undefined}
+                >
+                  {stat.value}
+                </div>
+                {stat.subValue && (
+                  <div className="text-xs text-muted-foreground font-sans mt-1">
+                    {stat.subValue}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ))}
