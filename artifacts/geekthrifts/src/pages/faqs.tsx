@@ -29,7 +29,7 @@ const FAQS = [
   },
   {
     q: "What if my item arrives damaged?",
-    a: "In the unlikely event that an item arrives damaged or is not as described, contact us on Instagram @geek.thrifts within 3 days with photos. We will arrange a return and refund or exchange.",
+    a: "In the unlikely event that an item arrives damaged or is not as described, contact us on geekthriftsstore@gmail.com within 3 days with photos. We will arrange a return and refund or exchange.",
   },
   {
     q: "How do I track my order?",
@@ -41,7 +41,7 @@ const FAQS = [
   },
   {
     q: "How do I contact GeekThrifts?",
-    a: "Reach us on Instagram @geek.thrifts. We are active and typically respond within a few hours.",
+    a: "Reach us on geekthriftsstore@gmail.com. We are active and typically respond within a few hours.",
   },
 ];
 
