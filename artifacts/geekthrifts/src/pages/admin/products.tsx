@@ -227,7 +227,7 @@ export default function AdminProducts() {
       form.setValue("imageUrl", currentImages[0] || "");
     } catch (err: any) {
       setUploadError(err?.message || "Failed to upload image.");
-    } font-sans {
+    } finally {
       setUploadingSlots((prev) => ({ ...prev, [index]: false }));
     }
   };
@@ -373,9 +373,7 @@ export default function AdminProducts() {
                       Featured
                     </div>
                   )}
-
-                  {/* FIXED OVERLAY FOR MOBILE & DESKTOP */}
-                  <div className="absolute inset-0 bg-background/80 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
+                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
                     <Button
                       className="rounded-none h-10 w-10 bg-background border-border"
                       onClick={() => openEditDialog(product)}
