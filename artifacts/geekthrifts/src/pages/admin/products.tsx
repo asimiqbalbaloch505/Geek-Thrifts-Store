@@ -196,6 +196,7 @@ export default function AdminProducts() {
   };
 
   // Upload image slot to Supabase
+  // Upload image slot to Supabase
   const handleFileUploadForIndex = async (
     event: React.ChangeEvent<HTMLInputElement>,
     index: number
@@ -231,7 +232,6 @@ export default function AdminProducts() {
       setUploadingSlots((prev) => ({ ...prev, [index]: false }));
     }
   };
-
   const removeImageAtIndex = (index: number) => {
     const currentImages = [...(form.getValues("images") || [])];
     currentImages.splice(index, 1);
@@ -373,7 +373,9 @@ export default function AdminProducts() {
                       Featured
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
+
+                  {/* FIXED OVERLAY FOR MOBILE & DESKTOP */}
+                  <div className="absolute inset-0 bg-background/80 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
                     <Button
                       className="rounded-none h-10 w-10 bg-background border-border"
                       onClick={() => openEditDialog(product)}
