@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { LayoutDashboard, ShoppingBag, Tags, Settings, LogOut, PackageOpen } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Tags, LogOut, PackageOpen } from "lucide-react";
 import { useEffect } from "react";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -23,7 +23,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground font-sans">
+    <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground font-sans">
+      {/* Desktop Sidebar */}
       <aside className="w-64 border-r border-border flex flex-col hidden md:flex sticky top-0 h-screen">
         <div className="p-6 border-b border-border font-serif">
           <Link href="/" className="text-xl font-bold tracking-tighter uppercase block mb-1">
@@ -65,14 +66,48 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
+      {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="md:hidden border-b border-border p-4 flex items-center justify-between">
-          <div className="font-serif text-lg font-bold tracking-tighter uppercase">GEEKTHRIFTS ADMIN</div>
-          <button onClick={() => { logout(); setLocation("/admin/login"); }}>
-            <LogOut className="w-5 h-5" />
-          </button>
+        {/* Mobile Header & Navigation */}
+        <header className="md:hidden border-b border-border bg-background sticky top-0 z-40">
+          <div className="p-4 flex items-center justify-between border-b border-border">
+            <Link href="/admin" className="font-serif text-lg font-bold tracking-tighter uppercase">
+              GEEKTHRIFTS ADMIN
+            </Link>
+            <button 
+              onClick={() => { logout(); setLocation("/admin/login"); }}
+              className="p-1 hover:text-destructive transition-colors"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Mobile Admin Navigation Bar */}
+          <nav className="flex items-center overflow-x-auto p-2 gap-1 scrollbar-none bg-muted/30">
+            {navItems.map((item) => {
+              const isActive = location === item.href || (item.href !== "/admin" && location.startsWith(item.href));
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2 px-3 py-2 text-xs uppercase tracking-wider font-bold whitespace-nowrap transition-colors rounded-none ${
+                    isActive 
+                      ? "bg-foreground text-background" 
+                      : "bg-background border border-border text-foreground hover:bg-accent"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
         </header>
-        <div className="flex-1 p-6 md:p-10 overflow-y-auto">
+
+        {/* Page Content */}
+        <div className="flex-1 p-4 md:p-10 overflow-y-auto">
           {children}
         </div>
       </main>
