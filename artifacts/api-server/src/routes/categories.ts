@@ -21,7 +21,7 @@ router.get("/", async (req, res): Promise<void> => {
         imageUrl: categoriesTable.imageUrl,
         parentId: categoriesTable.parentId,
         sizes: categoriesTable.sizes,
-        isActive: categoriesTable.isActive, // ✅ ADDED: Select isActive
+        isActive: categoriesTable.isActive,
         createdAt: categoriesTable.createdAt,
         productCount: sql<number>`CAST(COUNT(CASE WHEN ${productsTable.isActive} = true THEN 1 END) AS INTEGER)`,
       })
@@ -35,7 +35,7 @@ router.get("/", async (req, res): Promise<void> => {
         categoriesTable.imageUrl,
         categoriesTable.parentId,
         categoriesTable.sizes,
-        categoriesTable.isActive, // ✅ ADDED: Include isActive in GroupBy
+        categoriesTable.isActive,
         categoriesTable.createdAt
       )
       .orderBy(categoriesTable.name);
@@ -59,9 +59,18 @@ router.get("/", async (req, res): Promise<void> => {
 });
 
 router.post("/", async (req, res): Promise<void> => {
-  const parsed = CreateCategoryBody.safeParse(req.body);
+  // Pre-process body to convert string "none" or empty string parentId to null before Zod parse
+  const bodyToParse = {
+    ...req.body,
+    parentId:
+      req.body.parentId === "none" || req.body.parentId === "" || req.body.parentId === undefined
+        ? null
+        : Number(req.body.parentId) || null,
+  };
+
+  const parsed = CreateCategoryBody.safeParse(bodyToParse);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
+    res.status(400).json({ error: parsed.error.message, issues: parsed.error.issues });
     return;
   }
 
@@ -72,19 +81,30 @@ router.post("/", async (req, res): Promise<void> => {
         ? parsed.data.slug.trim().toLowerCase().replace(/\s+/g, "-")
         : parsed.data.name.trim().toLowerCase().replace(/\s+/g, "-");
 
-    // Strictly construct the database insert object (prevents extra payload fields from breaking Postgres)
+    // Safely parse parentId numeric value
+    const rawParentId = req.body.parentId;
+    let parentId: number | null = null;
+
+    if (rawParentId !== undefined && rawParentId !== null && rawParentId !== "none" && rawParentId !== "") {
+      const parsedNum = Number(rawParentId);
+      parentId = !isNaN(parsedNum) && parsedNum > 0 ? parsedNum : null;
+    }
+
+    // Safely parse sizes
+    const sizes = Array.isArray(req.body.sizes)
+      ? req.body.sizes
+      : Array.isArray((parsed.data as any).sizes)
+      ? (parsed.data as any).sizes
+      : [];
+
+    // Construct database insert object
     const insertData = {
-      name: parsed.data.name,
+      name: parsed.data.name.trim(),
       slug,
-      description: parsed.data.description ?? null,
-      imageUrl: (parsed.data as any).imageUrl ?? null,
-      parentId:
-        req.body.parentId !== undefined && req.body.parentId !== null
-          ? Number(req.body.parentId) || null
-          : null,
-      sizes: Array.isArray(req.body.sizes)
-        ? req.body.sizes
-        : (parsed.data as any).sizes ?? [],
+      description: parsed.data.description?.trim() || null,
+      imageUrl: (parsed.data as any).imageUrl || null,
+      parentId,
+      sizes,
       isActive: req.body.isActive !== undefined ? Boolean(req.body.isActive) : true,
     };
 
@@ -126,19 +146,21 @@ router.put("/:id", async (req, res): Promise<void> => {
     const updatePayload: Record<string, any> = { ...parsed.data };
 
     if ("parentId" in req.body) {
-      updatePayload.parentId = req.body.parentId
-        ? Number(req.body.parentId)
-        : null;
+      const rawParentId = req.body.parentId;
+      if (rawParentId === "none" || rawParentId === "" || rawParentId === null || rawParentId === undefined) {
+        updatePayload.parentId = null;
+      } else {
+        const parsedNum = Number(rawParentId);
+        updatePayload.parentId = !isNaN(parsedNum) && parsedNum > 0 ? parsedNum : null;
+      }
     }
 
     if ("sizes" in req.body) {
-      updatePayload.sizes = Array.isArray(req.body.sizes)
-        ? req.body.sizes
-        : [];
+      updatePayload.sizes = Array.isArray(req.body.sizes) ? req.body.sizes : [];
     }
 
     if ("isActive" in req.body) {
-      updatePayload.isActive = Boolean(req.body.isActive); // ✅ Supports toggling active status in PUT endpoint
+      updatePayload.isActive = Boolean(req.body.isActive);
     }
 
     const [updated] = await db
