@@ -1,6 +1,6 @@
 import { Layout } from "@/components/layout";
 import { useGetProduct, getGetProductQueryKey, useListProducts, Product } from "@workspace/api-client-react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useMemo, useRef, TouchEvent } from "react";
@@ -333,6 +333,7 @@ function resolveSizeInventory(product: any): SizeInventoryItem[] {
 export default function ProductDetail() {
   const params = useParams();
   const productId = Number(params.id);
+  const [, setLocation] = useLocation();
   const { addToCart } = useCart();
   const { toast } = useToast();
 
@@ -423,6 +424,7 @@ export default function ProductDetail() {
       title: "Added to cart",
       description: `${quantity}x ${product.name} added to your cart.`,
     });
+    setLocation("/cart");
   };
 
   if (isLoading) {
