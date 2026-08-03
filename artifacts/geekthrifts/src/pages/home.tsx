@@ -1,10 +1,12 @@
 import { Layout } from "@/components/layout";
-import { useListProducts, getListProductsQueryKey } from "@workspace/api-client-react";
+import { useListProducts, getListProductsQueryKey, Product } from "@workspace/api-client-react";
 import { Link } from "wouter";
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShoppingBag } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { useCart } from "@/hooks/use-cart";
+import { useToast } from "@/hooks/use-toast";
 
 const HERO_SLIDES = [
   {
@@ -54,6 +56,9 @@ const HERO_SLIDES = [
 const INTERVAL = 4500;
 
 export default function Home() {
+  const { addToCart } = useCart();
+  const { toast } = useToast();
+
   const { data: allProducts, isLoading } = useListProducts(
     undefined,
     { query: { queryKey: getListProductsQueryKey() } }
@@ -79,6 +84,19 @@ export default function Home() {
     const t = setInterval(next, INTERVAL);
     return () => clearInterval(t);
   }, [next]);
+
+  const handleQuickAdd = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const defaultSize = product.sizes && product.sizes.length > 0 ? product.sizes[0] : "Free Size";
+    addToCart(product, defaultSize, 1);
+
+    toast({
+      title: "Added to cart",
+      description: `${product.name} (${defaultSize})`,
+    });
+  };
 
   const slide = HERO_SLIDES[current];
 
@@ -181,7 +199,6 @@ export default function Home() {
         </div>
       </section>
 
-
       {/* ── Featured Products ── */}
       <section className="py-14 md:py-20 px-4 max-w-[1400px] mx-auto w-full">
         <div className="flex items-center justify-between mb-8">
@@ -203,7 +220,7 @@ export default function Home() {
                 </div>
               ))
             : featured.map((product) => (
-                <Link key={product.id} href={`/products/${product.id}`} className="product-card group block">
+                <Link key={product.id} href={`/product/${product.id}`} className="product-card group block">
                   <div className="relative overflow-hidden bg-gray-50 aspect-[3/4]">
                     {product.imageUrl ? (
                       <img
@@ -223,6 +240,17 @@ export default function Home() {
                       <span className="absolute top-2 left-2 bg-gray-900 text-white text-[10px] px-2 py-0.5 uppercase tracking-wider font-semibold">
                         Last {product.stock}
                       </span>
+                    )}
+
+                    {/* Quick Add to Cart Button */}
+                    {product.stock > 0 && (
+                      <button
+                        onClick={(e) => handleQuickAdd(e, product)}
+                        title="Add to Cart"
+                        className="absolute bottom-2 right-2 z-10 p-2 bg-white/90 hover:bg-black hover:text-white text-gray-900 rounded-full shadow transition-all duration-200 transform translate-y-1 opacity-0 group-hover:opacity-100 group-hover:translate-y-0"
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                      </button>
                     )}
                   </div>
                   <div className="mt-2.5 space-y-0.5">

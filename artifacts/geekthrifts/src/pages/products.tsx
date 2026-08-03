@@ -2,11 +2,17 @@ import { useListProducts, useListCategories, Product, Category } from "@workspac
 import { formatPKR, getImageUrl } from "@/lib/utils";
 import { Link, useSearch } from "wouter";
 import { Layout } from "@/components/layout";
+import { ShoppingBag } from "lucide-react";
+import { useCart } from "@/hooks/use-cart";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CustomerProductsPage() {
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const selectedCategorySlug = searchParams.get("category")?.toLowerCase();
+
+  const { addToCart } = useCart();
+  const { toast } = useToast();
 
   const { data: products, isLoading: loadingProducts } = useListProducts();
   const { data: categories } = useListCategories();
@@ -50,6 +56,19 @@ export default function CustomerProductsPage() {
   const description = activeCategory
     ? `Browse ${activeCategory.name}`
     : "Browse our complete thrift and geek collection.";
+
+  const handleQuickAdd = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const defaultSize = product.sizes && product.sizes.length > 0 ? product.sizes[0] : "Free Size";
+    addToCart(product, defaultSize, 1);
+
+    toast({
+      title: "Added to cart",
+      description: `${product.name} (${defaultSize})`,
+    });
+  };
 
   return (
     <Layout>
@@ -102,6 +121,17 @@ export default function CustomerProductsPage() {
                     <span className="absolute top-2 left-2 bg-gray-900 text-white text-[10px] px-2 py-0.5 uppercase tracking-wider font-semibold">
                       Last {product.stock}
                     </span>
+                  )}
+
+                  {/* Quick Add to Cart Button */}
+                  {product.stock > 0 && (
+                    <button
+                      onClick={(e) => handleQuickAdd(e, product)}
+                      title="Add to Cart"
+                      className="absolute bottom-2 right-2 z-10 p-2 bg-white/90 hover:bg-black hover:text-white text-gray-900 rounded-full shadow transition-all duration-200 transform translate-y-1 opacity-0 group-hover:opacity-100 group-hover:translate-y-0"
+                    >
+                      <ShoppingBag className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
                 <div className="mt-2.5 space-y-0.5">
