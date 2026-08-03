@@ -30,7 +30,7 @@ export default function CustomerProductsPage() {
       .forEach((child: Category) => matchingCategoryIds.add(child.id));
   }
 
-  const filteredProducts = (products ?? []).filter((product: Product) => {
+  const filteredProducts = [...(products ?? [])].sort((a, b) => b.id - a.id).filter((product: Product) => {
     if (!product.isActive) return false;
     if (!selectedCategorySlug) return true;
     
@@ -48,11 +48,11 @@ export default function CustomerProductsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 border-b border-border pb-6">
           <h1 className="font-serif text-3xl font-bold uppercase tracking-tighter mb-2">
-            {mainCategory ? mainCategory.name : "All Products"}
+            {mainCategory ? mainCategory.name : "Browse Our Collection"}
           </h1>
           <p className="text-muted-foreground text-sm">
             {mainCategory
-              ? `Showing all products in ${mainCategory.name}`
+              ? ` ${mainCategory.name}`
               : "Browse our complete thrift and geek collection."}
           </p>
         </div>

@@ -59,7 +59,7 @@ export default function Home() {
     { query: { queryKey: getListProductsQueryKey() } }
   );
 
-  const featured = allProducts?.filter(p => p.isFeatured && p.isActive) ?? [];
+  const featured = [...(allProducts ?? [])].sort((a, b) => b.id - a.id).filter(p => p.isFeatured && p.isActive);
 
   const [current, setCurrent] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
