@@ -22,18 +22,19 @@ export default function CustomerProductsPage() {
     (c: Category) => c.slug?.toLowerCase() === selectedCategorySlug
   );
 
-  // Identify main parent category (if active category is a subcategory, resolve to parent for product filtering)
-  const mainCategory = activeCategory?.parentId
-    ? categories?.find((c: Category) => c.id === activeCategory.parentId) || activeCategory
-    : activeCategory;
-
-  // Gather all matching category IDs (Main Category + All Subcategories under it)
+  // Gather matching category IDs:
+  // - If active category is a SUBCATEGORY (has parentId), match ONLY this subcategory.
+  // - If active category is a MAIN CATEGORY, match itself + all child subcategories.
   const matchingCategoryIds = new Set<number>();
-  if (mainCategory) {
-    matchingCategoryIds.add(mainCategory.id);
-    categories
-      ?.filter((c: Category) => c.parentId === mainCategory.id)
-      .forEach((child: Category) => matchingCategoryIds.add(child.id));
+  if (activeCategory) {
+    matchingCategoryIds.add(activeCategory.id);
+
+    // Only add children if activeCategory is a top-level parent category
+    if (!activeCategory.parentId) {
+      categories
+        ?.filter((c: Category) => c.parentId === activeCategory.id)
+        .forEach((child: Category) => matchingCategoryIds.add(child.id));
+    }
   }
 
   const filteredProducts = [...(products ?? [])]
@@ -45,8 +46,8 @@ export default function CustomerProductsPage() {
       // Fallback: match by Category ID OR string matching on categoryName for resilience
       const matchesId = matchingCategoryIds.has(product.categoryId);
       const matchesName =
-        mainCategory &&
-        product.categoryName?.toLowerCase().includes(mainCategory.name.toLowerCase());
+        activeCategory &&
+        product.categoryName?.toLowerCase().includes(activeCategory.name.toLowerCase());
 
       return matchesId || matchesName;
     });
