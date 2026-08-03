@@ -11,12 +11,12 @@ export default function CustomerProductsPage() {
   const { data: products, isLoading: loadingProducts } = useListProducts();
   const { data: categories } = useListCategories();
 
-  // Find currently selected category
+  // Find currently selected category (Main or Subcategory)
   const activeCategory = categories?.find(
     (c: Category) => c.slug?.toLowerCase() === selectedCategorySlug
   );
 
-  // Identify main parent category (if active category is a subcategory, resolve to parent)
+  // Identify main parent category (if active category is a subcategory, resolve to parent for product filtering)
   const mainCategory = activeCategory?.parentId
     ? categories?.find((c: Category) => c.id === activeCategory.parentId) || activeCategory
     : activeCategory;
@@ -45,17 +45,21 @@ export default function CustomerProductsPage() {
       return matchesId || matchesName;
     });
 
+  // Determine Title & Description dynamically based on active selection
+  const title = activeCategory ? activeCategory.name : "Browse Our Collection";
+  const description = activeCategory
+    ? `Browse ${activeCategory.name}`
+    : "Browse our complete thrift and geek collection.";
+
   return (
     <Layout>
       <div className="py-14 md:py-20 px-4 max-w-[1400px] mx-auto w-full">
         <div className="mb-8 border-b border-gray-100 pb-6">
           <h1 className="font-serif text-3xl font-bold uppercase tracking-tighter mb-2">
-            {mainCategory ? mainCategory.name : "Browse Our Collection"}
+            {title}
           </h1>
           <p className="text-muted-foreground text-sm">
-            {mainCategory
-              ? `Browse ${mainCategory.name}`
-              : "Browse our complete thrift and geek collection."}
+            {description}
           </p>
         </div>
 
