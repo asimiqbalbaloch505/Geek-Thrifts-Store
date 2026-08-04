@@ -449,9 +449,9 @@ export default function ProductDetail() {
     return (
       <Layout>
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 md:py-16">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-16">
-            <Skeleton className="md:col-span-7 h-[550px] w-full rounded-none bg-gray-100" />
-            <div className="md:col-span-5 flex flex-col pt-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12">
+            <Skeleton className="md:col-span-8 h-[550px] w-full rounded-none bg-gray-100" />
+            <div className="md:col-span-4 flex flex-col pt-4 space-y-4">
               <Skeleton className="h-5 w-20 rounded-none bg-gray-100" />
               <Skeleton className="h-10 w-3/4 rounded-none bg-gray-100" />
               <Skeleton className="h-6 w-1/4 rounded-none bg-gray-100" />
@@ -512,10 +512,10 @@ export default function ProductDetail() {
           <span className="text-gray-700 truncate">{product.name}</span>
         </div>
 
-        {/* Updated grid proportions: Images take 7 columns, Info takes 5 columns for larger image presence */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-16 items-start">
+        {/* Expanded grid proportions: Images take 8 columns, Info takes 4 columns */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-start">
           {/* Dynamic Multi-Image Gallery Container */}
-          <div className="md:col-span-7 w-full">
+          <div className="md:col-span-8 w-full">
             <ProductImageGallery 
               images={productImages} 
               name={product.name} 
@@ -525,7 +525,7 @@ export default function ProductDetail() {
           </div>
 
           {/* Product Info - Sticky sidebar for desktop */}
-          <div className="md:col-span-5 flex flex-col md:sticky md:top-24">
+          <div className="md:col-span-4 flex flex-col md:sticky md:top-24">
             <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-2">
               {product.categoryName || "GeekThrifts"}
             </p>
