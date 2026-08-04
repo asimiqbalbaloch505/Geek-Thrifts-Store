@@ -337,6 +337,11 @@ export default function ProductDetail() {
   const { addToCart } = useCart();
   const { toast } = useToast();
 
+  // Scroll to top whenever product ID changes or page loads
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [productId]);
+
   const { data: product, isLoading } = useGetProduct(productId, {
     query: { enabled: !!productId, queryKey: getGetProductQueryKey(productId) },
   });
@@ -444,9 +449,9 @@ export default function ProductDetail() {
     return (
       <Layout>
         <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 md:py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-20">
-            <Skeleton className="h-[450px] w-full rounded-none bg-gray-100" />
-            <div className="flex flex-col pt-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-16">
+            <Skeleton className="md:col-span-7 h-[550px] w-full rounded-none bg-gray-100" />
+            <div className="md:col-span-5 flex flex-col pt-4 space-y-4">
               <Skeleton className="h-5 w-20 rounded-none bg-gray-100" />
               <Skeleton className="h-10 w-3/4 rounded-none bg-gray-100" />
               <Skeleton className="h-6 w-1/4 rounded-none bg-gray-100" />
@@ -507,9 +512,10 @@ export default function ProductDetail() {
           <span className="text-gray-700 truncate">{product.name}</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-start">
+        {/* Updated grid proportions: Images take 7 columns, Info takes 5 columns for larger image presence */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 lg:gap-16 items-start">
           {/* Dynamic Multi-Image Gallery Container */}
-          <div className="w-full">
+          <div className="md:col-span-7 w-full">
             <ProductImageGallery 
               images={productImages} 
               name={product.name} 
@@ -519,7 +525,7 @@ export default function ProductDetail() {
           </div>
 
           {/* Product Info - Sticky sidebar for desktop */}
-          <div className="flex flex-col md:sticky md:top-24">
+          <div className="md:col-span-5 flex flex-col md:sticky md:top-24">
             <p className="text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold mb-2">
               {product.categoryName || "GeekThrifts"}
             </p>
@@ -528,11 +534,6 @@ export default function ProductDetail() {
             </h1>
             <p className="text-xl font-bold text-gray-900 mb-6 pb-6 border-b border-gray-100">
               {formatPKR(product.price)}
-            </p>
-
-            <p className="text-[14px] text-gray-500 leading-relaxed mb-8">
-              {product.description ??
-                "A carefully selected piece from GeekThrifts. Authenticated, cleaned, and pressed for the modern Pakistani professional."}
             </p>
 
             {/* Size Selector */}
@@ -633,12 +634,23 @@ export default function ProductDetail() {
                 isCompletelyOutOfStock ||
                 (hasSizeInventory && selectedSize !== "" && selectedSizeStock === 0)
               }
-              className="h-12 w-full bg-gray-900 text-white text-[12px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed mb-4"
+              className="h-12 w-full bg-gray-900 text-white text-[12px] uppercase tracking-[0.15em] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed mb-6"
             >
               {isCompletelyOutOfStock ? "Out of Stock" : "Add to Cart"}
             </button>
 
-            <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100 mt-4">
+            {/* Product Description - Placed after Add to Cart */}
+            <div className="pt-6 border-t border-gray-100 mb-6">
+              <h3 className="text-[11px] uppercase tracking-[0.15em] font-bold text-gray-900 mb-2">
+                Product Description
+              </h3>
+              <p className="text-[14px] text-gray-500 leading-relaxed">
+                {product.description ??
+                  "A carefully selected piece from GeekThrifts. Authenticated, cleaned, and pressed for the modern Pakistani professional."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-900 mb-0.5">
                   Delivery
