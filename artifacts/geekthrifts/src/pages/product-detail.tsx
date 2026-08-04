@@ -661,7 +661,7 @@ export default function ProductDetail() {
         {relatedProducts.length > 0 && (
           <div className="mt-20 pt-12 border-t border-gray-100">
             <h2 className="font-serif text-2xl font-bold tracking-tight text-gray-900 mb-8 uppercase">
-              You May Also Like
+              OUR PICKS FOR YOU
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
               {relatedProducts.map((relProduct: Product) => (
