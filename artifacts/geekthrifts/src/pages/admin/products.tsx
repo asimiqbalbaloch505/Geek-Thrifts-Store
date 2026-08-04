@@ -375,24 +375,24 @@ export default function AdminProducts() {
                   )}
 
                   {/* FIXED OVERLAY FOR MOBILE & DESKTOP */}
-                  <div className="absolute inset-0 bg-background/80 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-sm">
-                    <Button
-                      className="rounded-none h-10 w-10 bg-background border-border"
-                      onClick={() => openEditDialog(product)}
-                      size="icon"
-                      variant="outline"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      className="rounded-none h-10 w-10"
-                      onClick={() => handleDelete(product.id)}
-                      size="icon"
-                      variant="destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+<div className="absolute inset-0 flex items-center justify-center gap-2 p-2 sm:bg-background/80 sm:backdrop-blur-sm sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+  <Button
+    className="rounded-none h-9 w-9 sm:h-10 sm:w-10 bg-background/90 border-border shadow-md"
+    onClick={() => openEditDialog(product)}
+    size="icon"
+    variant="outline"
+  >
+    <Edit className="w-4 h-4" />
+  </Button>
+  <Button
+    className="rounded-none h-9 w-9 sm:h-10 sm:w-10 shadow-md"
+    onClick={() => handleDelete(product.id)}
+    size="icon"
+    variant="destructive"
+  >
+    <Trash2 className="w-4 h-4" />
+  </Button>
+</div>
                 </div>
                 <div className="p-4 font-sans flex-1 flex flex-col">
                   <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-1">
