@@ -644,7 +644,7 @@ export default function ProductDetail() {
               <h3 className="text-[11px] uppercase tracking-[0.15em] font-bold text-gray-900 mb-2">
                 Product Description
               </h3>
-              <p className="text-[14px] text-gray-500 leading-relaxed">
+              <p className="text-[14px] text-gray-500 leading-relaxed whitespace-pre-line">
                 {product.description ??
                   "A carefully selected piece from GeekThrifts. Authenticated, cleaned, and pressed for the modern Pakistani professional."}
               </p>
