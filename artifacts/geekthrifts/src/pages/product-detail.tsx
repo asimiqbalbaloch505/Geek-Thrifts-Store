@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo, useRef, TouchEvent } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Minus, Plus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { Minus, Plus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 
 type SizeInventoryItem = { size: string; qty: number };
 
@@ -374,7 +374,7 @@ export default function ProductDetail() {
           (p.categoryId === product.categoryId ||
             p.categoryName?.toLowerCase() === product.categoryName?.toLowerCase())
       )
-      .slice(0, 4);
+      .slice(0, 5);
   }, [product, allProducts]);
 
   const totalStock = product?.stock ?? 0;
@@ -425,6 +425,19 @@ export default function ProductDetail() {
       description: `${quantity}x ${product.name} added to your cart.`,
     });
     setLocation("/cart");
+  };
+
+  const handleQuickAdd = (e: React.MouseEvent, relProduct: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const defaultSize = relProduct.sizes && relProduct.sizes.length > 0 ? relProduct.sizes[0] : "Free Size";
+    addToCart(relProduct, defaultSize, 1);
+
+    toast({
+      title: "Added to cart",
+      description: `${relProduct.name} (${defaultSize})`,
+    });
   };
 
   if (isLoading) {
@@ -647,41 +660,63 @@ export default function ProductDetail() {
         {/* You May Also Like Section */}
         {relatedProducts.length > 0 && (
           <div className="mt-20 pt-12 border-t border-gray-100">
-            <h2 className="font-serif text-2xl font-bold tracking-tight text-gray-900 mb-6 uppercase">
+            <h2 className="font-serif text-2xl font-bold tracking-tight text-gray-900 mb-8 uppercase">
               You May Also Like
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
               {relatedProducts.map((relProduct: Product) => (
                 <Link
                   key={relProduct.id}
                   href={`/product/${relProduct.id}`}
-                  className="group border border-gray-100 bg-white flex flex-col transition-all hover:border-gray-300"
+                  className="product-card group block"
                 >
-                  <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden">
+                  <div className="relative overflow-hidden bg-gray-50 aspect-[3/4]">
                     {relProduct.imageUrl ? (
                       <img
                         src={getImageUrl(relProduct.imageUrl)}
                         alt={relProduct.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="product-card-img w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[10px] uppercase text-gray-300 font-bold tracking-widest">
+                      <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs uppercase tracking-widest">
                         No Image
                       </div>
                     )}
-                  </div>
-                  <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div>
-                      <span className="text-[10px] uppercase tracking-widest text-gray-400 font-bold block mb-1">
-                        {relProduct.categoryName || "Geek Thrifts"}
+                    {relProduct.stock === 0 && (
+                      <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                        <span className="text-[11px] uppercase tracking-widest font-semibold text-gray-600">
+                          Sold Out
+                        </span>
+                      </div>
+                    )}
+                    {relProduct.stock > 0 && relProduct.stock <= 2 && (
+                      <span className="absolute top-2 left-2 bg-gray-900 text-white text-[10px] px-2 py-0.5 uppercase tracking-wider font-semibold">
+                        Last {relProduct.stock}
                       </span>
-                      <h3 className="font-serif font-bold text-base leading-tight mb-2 group-hover:underline truncate text-gray-900">
-                        {relProduct.name}
-                      </h3>
-                    </div>
-                    <div className="font-bold text-sm mt-2 text-gray-900">
+                    )}
+
+                    {/* Quick Add to Cart Button */}
+                    {relProduct.stock > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleQuickAdd(e, relProduct)}
+                        title="Add to Cart"
+                        className="absolute bottom-2 right-2 z-10 p-2 bg-white/90 hover:bg-black hover:text-white text-gray-900 rounded-full shadow transition-all duration-200 transform translate-y-1 opacity-0 group-hover:opacity-100 group-hover:translate-y-0"
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-2.5 space-y-0.5">
+                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold block">
+                      {relProduct.categoryName || "Geek Thrifts"}
+                    </span>
+                    <h3 className="text-[13px] font-semibold text-gray-900 leading-snug group-hover:text-gray-600 transition-colors truncate">
+                      {relProduct.name}
+                    </h3>
+                    <p className="text-[13px] font-bold text-gray-900">
                       {formatPKR(relProduct.price)}
-                    </div>
+                    </p>
                   </div>
                 </Link>
               ))}
