@@ -81,7 +81,7 @@ function SimpleDropdown({ item }: { item: NestedCategory }) {
     >
       <Link href={`/products?category=${item.slug}`}>
         <div className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500 hover:text-black hover:bg-gray-50 transition-colors border-b border-gray-100 cursor-pointer">
-          All {item.name}
+          Classic {item.name}
         </div>
       </Link>
       {item.subs.map((sub) => (
