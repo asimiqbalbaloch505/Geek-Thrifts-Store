@@ -96,8 +96,8 @@ export default function Home() {
   return (
     <Layout>
 
-      {/* ── Full-Screen Background Hero ── */}
-      <section className="relative overflow-hidden" style={{ minHeight: "92vh" }}>
+      {/* ── Responsive Hero Section ── */}
+      <section className="relative overflow-hidden min-h-[70vh] sm:min-h-[80vh] md:min-h-[92vh]">
 
         {/* Background images — stacked, crossfade */}
         {HERO_SLIDES.map((s, i) => (
@@ -115,33 +115,34 @@ export default function Home() {
           </div>
         ))}
 
-        {/* Gradient overlay — left-heavy so text stays readable */}
+        {/* Gradient overlay — enhanced dark gradient on mobile for text contrast */}
         <div
           className="absolute inset-0"
           style={{
-            background: "linear-gradient(105deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.70) 45%, rgba(0,0,0,0.25) 100%)",
+            background: "linear-gradient(105deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.72) 55%, rgba(0,0,0,0.30) 100%)",
           }}
         />
 
         {/* Content */}
-        <div className="relative z-10 h-full flex flex-col justify-center px-8 md:px-16 lg:px-24 py-20" style={{ minHeight: "92vh" }}>
+        <div 
+          className="relative z-10 h-full flex flex-col justify-center px-5 sm:px-10 md:px-16 lg:px-24 py-12 md:py-20 min-h-[70vh] sm:min-h-[80vh] md:min-h-[92vh]"
+        >
           <div className="max-w-xl">
 
             {/* Brand tag */}
             <div
-              className="mb-5 transition-all duration-500"
+              className="mb-3 md:mb-5 transition-all duration-500"
               style={{ opacity: transitioning ? 0 : 1, transform: transitioning ? "translateY(6px)" : "translateY(0)" }}
             >
-              <span className="inline-block text-[10px] font-semibold uppercase tracking-[0.4em] text-white/60 border border-white/25 px-3 py-1">
+              <span className="inline-block text-[9px] md:text-[10px] font-semibold uppercase tracking-[0.35em] md:tracking-[0.4em] text-white/60 border border-white/25 px-2.5 py-1 md:px-3">
                 {slide.tag}
               </span>
             </div>
 
             {/* Headline */}
             <h1
-              className="font-serif font-bold text-white leading-none tracking-tight mb-5 transition-all duration-500"
+              className="font-serif font-bold text-white leading-none tracking-tight mb-3 md:mb-5 transition-all duration-500 text-4xl sm:text-5xl md:text-[clamp(3.5rem,8vw,6rem)]"
               style={{
-                fontSize: "clamp(3.5rem, 8vw, 6rem)",
                 whiteSpace: "pre-line",
                 opacity: transitioning ? 0 : 1,
                 transform: transitioning ? "translateY(14px)" : "translateY(0)",
@@ -152,34 +153,34 @@ export default function Home() {
 
             {/* Subline */}
             <p
-              className="text-[15px] text-white/65 leading-relaxed max-w-sm mb-8 transition-all duration-500"
+              className="text-[13px] md:text-[15px] text-white/65 leading-relaxed max-w-xs sm:max-w-sm mb-6 md:mb-8 transition-all duration-500"
               style={{ opacity: transitioning ? 0 : 1, transform: transitioning ? "translateY(8px)" : "translateY(0)" }}
             >
               {slide.sub}
             </p>
 
-            {/* CTA */}
-            <div className="flex items-center gap-3 mb-10">
+            {/* CTA Buttons */}
+            <div className="flex items-center gap-2.5 md:gap-3 mb-8 md:mb-10">
               <Link href={slide.cta.href}>
-                <button className="h-11 px-8 bg-white text-gray-900 text-[11px] uppercase tracking-[0.18em] font-bold hover:bg-gray-100 transition-colors">
+                <button className="h-10 md:h-11 px-5 sm:px-8 bg-white text-gray-900 text-[10px] md:text-[11px] uppercase tracking-[0.16em] md:tracking-[0.18em] font-bold hover:bg-gray-100 transition-colors">
                   {slide.cta.label}
                 </button>
               </Link>
               <Link href="/products">
-                <button className="h-11 px-7 bg-transparent text-white text-[11px] uppercase tracking-[0.18em] font-semibold border border-white/40 hover:border-white transition-colors">
+                <button className="h-10 md:h-11 px-4 sm:px-7 bg-transparent text-white text-[10px] md:text-[11px] uppercase tracking-[0.16em] md:tracking-[0.18em] font-semibold border border-white/40 hover:border-white transition-colors">
                   All Products
                 </button>
               </Link>
             </div>
 
-            {/* Dots only — no arrows */}
+            {/* Dots */}
             <div className="flex items-center gap-2">
               {HERO_SLIDES.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => goTo(i)}
                   aria-label={`Slide ${i + 1}`}
-                  className={`transition-all duration-300 rounded-full ${i === current ? "w-6 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"}`}
+                  className={`transition-all duration-300 rounded-full ${i === current ? "w-5 md:w-6 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/40 hover:bg-white/70"}`}
                 />
               ))}
             </div>
@@ -187,7 +188,7 @@ export default function Home() {
         </div>
 
         {/* Slide counter */}
-        <div className="absolute bottom-6 right-6 z-10 text-[11px] font-semibold text-white/50 tracking-widest">
+        <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-10 text-[10px] md:text-[11px] font-semibold text-white/50 tracking-widest">
           {String(current + 1).padStart(2, "0")} / {String(HERO_SLIDES.length).padStart(2, "0")}
         </div>
       </section>
