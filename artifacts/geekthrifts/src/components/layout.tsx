@@ -352,7 +352,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                               onClick={() => setMobileOpen(false)}
                               className="py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] text-gray-600 hover:text-black border-b border-gray-100 transition-colors cursor-pointer"
                             >
-                              All {item.name}
+                              Classic {item.name}
                             </Link>
                             {item.subs.map((sub) => (
                               <Link
