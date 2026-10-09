@@ -497,7 +497,7 @@ export default function ProductDetail() {
     <Layout>
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-8 md:py-12">
         {/* Breadcrumb */}
-        {/* <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-8">
+        <div className="flex items-center gap-2 text-[12px] text-gray-400 mb-8">
           <Link href="/" className="hover:text-gray-700 transition-colors">
             Home
           </Link>
@@ -509,8 +509,8 @@ export default function ProductDetail() {
             {product.categoryName || "Category"}
           </Link>
           <span>/</span>
-          <span className="text-gray-700 truncate">{product.name}</span>
-        </div> */}
+          {/* <span className="text-gray-700 truncate">{product.name}</span> */}
+        </div>
 
         {/* Expanded grid proportions: Images take 8 columns, Info takes 4 columns */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-start">
