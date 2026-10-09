@@ -70,9 +70,13 @@ export default function AdminOrders() {
   const queryClient = useQueryClient();
   const updateStatus = useUpdateOrderStatus();
 
-  // Fetch orders without attaching restrictive status params to ensure full client-side filtering works seamlessly across tabs
+// Fetch active orders or archived orders conditionally from API
   const { data: orders, isLoading } = useListOrders(
-    filter && filter !== "archived" ? { status: filter } : undefined
+    filter === "archived"
+      ? ({ isArchived: true } as any)
+      : filter
+      ? { status: filter }
+      : undefined
   );
 
   const { data: products } = useListProducts();

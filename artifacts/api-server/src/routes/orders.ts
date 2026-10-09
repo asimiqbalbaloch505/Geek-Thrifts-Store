@@ -21,19 +21,36 @@ function mapOrder(order: any) {
   };
 }
 
-// 1. GET ALL ORDERS
+// 1. GET ORDERS (Excludes archived orders by default)
 router.get("/", async (req, res): Promise<void> => {
   const parsed = ListOrdersQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  try {
-    const orders = await db.execute(
-      sql`SELECT id, customer_name as "customerName", customer_email as "customerEmail", customer_phone as "customerPhone", customer_address as "customerAddress", customer_city as "customerCity", notes, status, total_amount as "totalAmount", items, created_at as "createdAt", is_archived as "isArchived" FROM orders ORDER BY created_at DESC`
-    );
 
-    res.json(orders.rows.map(mapOrder));
+  try {
+    const isArchivedQuery = req.query.isArchived === "true" || req.query.is_archived === "true";
+
+    let result;
+    if (isArchivedQuery) {
+      // Fetch ONLY archived orders when explicitly requested
+      result = await db.execute(
+        sql`SELECT id, customer_name as "customerName", customer_email as "customerEmail", customer_phone as "customerPhone", customer_address as "customerAddress", customer_city as "customerCity", notes, status, total_amount as "totalAmount", items, created_at as "createdAt", is_archived as "isArchived" FROM orders WHERE is_archived = true ORDER BY created_at DESC`
+      );
+    } else if (parsed.data.status) {
+      // Fetch active orders filtered by status
+      result = await db.execute(
+        sql`SELECT id, customer_name as "customerName", customer_email as "customerEmail", customer_phone as "customerPhone", customer_address as "customerAddress", customer_city as "customerCity", notes, status, total_amount as "totalAmount", items, created_at as "createdAt", is_archived as "isArchived" FROM orders WHERE (is_archived IS NOT TRUE OR is_archived = false) AND status = ${parsed.data.status} ORDER BY created_at DESC`
+      );
+    } else {
+      // Fetch all active (non-archived) orders by default
+      result = await db.execute(
+        sql`SELECT id, customer_name as "customerName", customer_email as "customerEmail", customer_phone as "customerPhone", customer_address as "customerAddress", customer_city as "customerCity", notes, status, total_amount as "totalAmount", items, created_at as "createdAt", is_archived as "isArchived" FROM orders WHERE is_archived IS NOT TRUE OR is_archived = false ORDER BY created_at DESC`
+      );
+    }
+
+    res.json(result.rows.map(mapOrder));
   } catch (err) {
     req.log.error({ err }, "Failed to list orders");
     res.status(500).json({ error: "Internal server error" });
