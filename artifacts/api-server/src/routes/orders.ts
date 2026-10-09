@@ -6,10 +6,8 @@ import { ordersTable, productsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
   CreateOrderBody,
-  UpdateOrderStatusBody,
   ListOrdersQueryParams,
   GetOrderParams,
-  UpdateOrderStatusParams,
 } from "@workspace/api-zod";
 import { sendOrderConfirmationEmails, sendStatusUpdateEmails } from "../lib/email.js";
 
@@ -169,159 +167,11 @@ router.get("/:id", async (req, res): Promise<void> => {
   }
 });
 
-// 4. UPDATE ORDER STATUS (Handles inventory restoration on cancellation)
-router.put("/:id", async (req, res): Promise<void> => {
-  const paramsParsed = UpdateOrderStatusParams.safeParse({ id: Number(req.params.id) });
-  if (!paramsParsed.success) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
-  const parsed = UpdateOrderStatusBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-  try {
-    const [existingOrder] = await db
-      .select()
-      .from(ordersTable)
-      .where(eq(ordersTable.id, paramsParsed.data.id))
-      .limit(1);
-
-    if (!existingOrder) {
-      res.status(404).json({ error: "Order not found" });
-      return;
-    }
-
-    const previousStatus = String(existingOrder.status ?? "").trim().toLowerCase();
-    const newStatus = String(parsed.data.status ?? "").trim().toLowerCase();
-
-    const [updated] = await db
-      .update(ordersTable)
-      .set({ status: parsed.data.status })
-      .where(eq(ordersTable.id, paramsParsed.data.id))
-      .returning();
-
-    const items = existingOrder.items as Array<{ productId: number; quantity: number; size: string }>;
-
-    // RESTORE INVENTORY when transitioning to "cancelled"
-    if (previousStatus !== "cancelled" && newStatus === "cancelled") {
-      await Promise.all(
-        items.map(async (item) => {
-          const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
-          if (!product) return;
-
-          const restoredStock = Number(product.stock ?? 0) + Number(item.quantity ?? 0);
-
-          let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
-          if (typeof rawInv === "string") {
-            try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
-          }
-
-          let updatedInv = rawInv;
-
-          if (Array.isArray(rawInv)) {
-            updatedInv = rawInv.map((s: any) => {
-              const sizeName = String(s.size ?? s.label ?? "").trim();
-              const targetSize = String(item.size).trim();
-              if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
-                const currentQty = Number(s.qty ?? s.quantity ?? 0);
-                return { ...s, qty: currentQty + Number(item.quantity ?? 0) };
-              }
-              return s;
-            });
-          } else if (rawInv && typeof rawInv === "object") {
-            updatedInv = { ...rawInv };
-            const targetSize = String(item.size).trim();
-            const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
-            if (foundKey) {
-              const currentQty = Number(updatedInv[foundKey] ?? 0);
-              updatedInv[foundKey] = currentQty + Number(item.quantity ?? 0);
-            }
-          }
-
-          await db
-            .update(productsTable)
-            .set({
-              stock: restoredStock,
-              sizeInventory: updatedInv,
-            })
-            .where(eq(productsTable.id, item.productId));
-        })
-      );
-    } 
-    // RE-DEDUCT INVENTORY if changing back from "cancelled" to active
-    else if (previousStatus === "cancelled" && newStatus !== "cancelled") {
-      await Promise.all(
-        items.map(async (item) => {
-          const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
-          if (!product) return;
-
-          const newStock = Math.max(0, Number(product.stock ?? 0) - Number(item.quantity ?? 0));
-
-          let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
-          if (typeof rawInv === "string") {
-            try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
-          }
-
-          let updatedInv = rawInv;
-
-          if (Array.isArray(rawInv)) {
-            updatedInv = rawInv.map((s: any) => {
-              const sizeName = String(s.size ?? s.label ?? "").trim();
-              const targetSize = String(item.size).trim();
-              if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
-                const currentQty = Number(s.qty ?? s.quantity ?? 0);
-                return { ...s, qty: Math.max(0, currentQty - Number(item.quantity ?? 0)) };
-              }
-              return s;
-            });
-          } else if (rawInv && typeof rawInv === "object") {
-            updatedInv = { ...rawInv };
-            const targetSize = String(item.size).trim();
-            const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
-            if (foundKey) {
-              const currentQty = Number(updatedInv[foundKey] ?? 0);
-              updatedInv[foundKey] = Math.max(0, currentQty - Number(item.quantity ?? 0));
-            }
-          }
-
-          await db
-            .update(productsTable)
-            .set({
-              stock: newStock,
-              sizeInventory: updatedInv,
-            })
-            .where(eq(productsTable.id, item.productId));
-        })
-      );
-    }
-
-    res.json(mapOrder(updated));
-
-    sendStatusUpdateEmails({
-      id: updated.id,
-      customerName: updated.customerName,
-      customerEmail: updated.customerEmail,
-      customerPhone: updated.customerPhone,
-      customerAddress: updated.customerAddress,
-      customerCity: updated.customerCity,
-      totalAmount: Number(updated.totalAmount),
-      status: updated.status,
-      items: updated.items as Array<{ productName: string; quantity: number; size: string; price: number }>,
-    }).catch((err) => req.log.error({ err }, "Failed to send status update emails"));
-  } catch (err) {
-    req.log.error({ err }, "Failed to update order status");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// 5. ARCHIVE ORDER (Soft Delete)
-// ARCHIVE ORDER (Soft Delete) - Using PUT to avoid 405 Method Not Allowed
-router.put("/:id", async (req, res): Promise<void> => {
-  const paramsParsed = GetOrderParams.safeParse({ id: Number(req.params.id) });
-  if (!paramsParsed.success) {
-    res.status(400).json({ error: "Invalid id" });
+// 4. SHARED UPDATE ORDER HANDLER (Status Change, Inventory Sync & Archiving)
+async function handleUpdateOrder(req: any, res: any): Promise<void> {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid order ID" });
     return;
   }
 
@@ -329,7 +179,7 @@ router.put("/:id", async (req, res): Promise<void> => {
     const [existingOrder] = await db
       .select()
       .from(ordersTable)
-      .where(eq(ordersTable.id, paramsParsed.data.id))
+      .where(eq(ordersTable.id, id))
       .limit(1);
 
     if (!existingOrder) {
@@ -337,7 +187,6 @@ router.put("/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    // Prepare update object
     const updateData: Record<string, any> = {};
 
     if (req.body.isArchived !== undefined) {
@@ -351,16 +200,16 @@ router.put("/:id", async (req, res): Promise<void> => {
     const previousStatus = String(existingOrder.status ?? "").trim().toLowerCase();
     const newStatus = String(req.body.status ?? previousStatus).trim().toLowerCase();
 
-    // Perform database update
+    // Perform DB update
     const [updated] = await db
       .update(ordersTable)
       .set(updateData)
-      .where(eq(ordersTable.id, paramsParsed.data.id))
+      .where(eq(ordersTable.id, id))
       .returning();
 
     const items = existingOrder.items as Array<{ productId: number; quantity: number; size: string }>;
 
-    // RESTORE INVENTORY on cancellation
+    // RESTORE INVENTORY when transitioning to "cancelled"
     if (previousStatus !== "cancelled" && newStatus === "cancelled") {
       await Promise.all(
         items.map(async (item) => {
@@ -472,6 +321,10 @@ router.put("/:id", async (req, res): Promise<void> => {
     req.log.error({ err }, "Failed to update order");
     res.status(500).json({ error: "Internal server error" });
   }
-});
+}
+
+// Bind handleUpdateOrder to both PUT and POST methods
+router.put("/:id", handleUpdateOrder);
+router.post("/:id", handleUpdateOrder);
 
 export default router;

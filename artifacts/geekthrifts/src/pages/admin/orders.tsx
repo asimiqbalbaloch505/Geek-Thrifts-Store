@@ -28,7 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Archive, Trash2, AlertTriangle } from "lucide-react";
+import { Archive, Trash2, AlertTriangle, RotateCcw } from "lucide-react";
 
 type Order = {
   id: number;
@@ -53,7 +53,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function AdminOrders() {
-  const [filter, setFilter] = useState<ListOrdersStatus | undefined>(undefined);
+  const [filter, setFilter] = useState<ListOrdersStatus | "archived" | undefined>(undefined);
   const [selected, setSelected] = useState<Order | null>(null);
 
   // Status Change Confirmation State
@@ -70,8 +70,8 @@ export default function AdminOrders() {
   const updateStatus = useUpdateOrderStatus();
 
   const { data: orders, isLoading } = useListOrders(
-    filter ? { status: filter } : undefined,
-    { query: { queryKey: getListOrdersQueryKey(filter ? { status: filter } : undefined) } }
+    filter && filter !== "archived" ? { status: filter } : undefined,
+    { query: { queryKey: getListOrdersQueryKey(filter && filter !== "archived" ? { status: filter } : undefined) } }
   );
 
   const { data: products } = useListProducts();
@@ -111,36 +111,59 @@ export default function AdminOrders() {
     );
   };
 
- const confirmArchiveOrder = async () => {
-  if (!pendingArchive) return;
-  try {
-    await fetch(`/api/orders/${pendingArchive.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isArchived: true }),
-    });
+  // Archive / Soft Delete Handler
+  const confirmArchiveOrder = async () => {
+    if (!pendingArchive) return;
+    try {
+      await fetch(`/api/orders/${pendingArchive.id}`, {
+        method: "POST", // Bypasses server PUT restrictions
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isArchived: true }),
+      });
 
-    queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
-    if (selected?.id === pendingArchive.id) {
-      setSelected(null);
+      queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+      if (selected?.id === pendingArchive.id) {
+        setSelected(null);
+      }
+    } catch (err) {
+      console.error("Failed to archive order", err);
+    } finally {
+      setPendingArchive(null);
     }
-  } catch (err) {
-    console.error("Failed to archive order", err);
-  } finally {
-    setPendingArchive(null);
-  }
-};
+  };
 
-  const tabs: { label: string; value: ListOrdersStatus | undefined }[] = [
+  // Restore / Un-archive Order
+  const handleUnarchiveOrder = async (orderId: number) => {
+    try {
+      await fetch(`/api/orders/${orderId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isArchived: false }),
+      });
+
+      queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+      if (selected?.id === orderId) {
+        setSelected(null);
+      }
+    } catch (err) {
+      console.error("Failed to restore order", err);
+    }
+  };
+
+  const tabs: { label: string; value: ListOrdersStatus | "archived" | undefined }[] = [
     { label: "All", value: undefined },
     { label: "Pending", value: "pending" },
     { label: "Confirmed", value: "confirmed" },
     { label: "Delivered", value: "delivered" },
     { label: "Cancelled", value: "cancelled" },
+    { label: "Archived", value: "archived" },
   ];
 
-  // Filter out archived orders from active list
-  const activeOrders = (orders as Order[])?.filter((o) => !o.isArchived) ?? [];
+  // Filter orders for active list vs archived list
+  const filteredOrders = (orders as Order[])?.filter((o) => {
+    if (filter === "archived") return o.isArchived === true;
+    return !o.isArchived;
+  }) ?? [];
 
   return (
     <AdminLayout>
@@ -170,8 +193,10 @@ export default function AdminOrders() {
       <div className="border border-border bg-card overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest">Loading...</div>
-        ) : activeOrders.length === 0 ? (
-          <div className="p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest">No active orders found</div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest">
+            {filter === "archived" ? "No archived orders found" : "No active orders found"}
+          </div>
         ) : (
           <Table>
             <TableHeader>
@@ -186,7 +211,7 @@ export default function AdminOrders() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeOrders.map((order) => (
+              {filteredOrders.map((order) => (
                 <TableRow
                   key={order.id}
                   className="border-b border-border hover:bg-muted/60 transition-colors cursor-pointer"
@@ -227,16 +252,28 @@ export default function AdminOrders() {
                     </Select>
                   </TableCell>
                   <TableCell className="p-4 align-middle text-right" onClick={(e) => e.stopPropagation()}>
-                    {(order.status === "delivered" || order.status === "cancelled") && (
+                    {order.isArchived ? (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setPendingArchive(order)}
-                        title="Archive Order"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
+                        onClick={() => handleUnarchiveOrder(order.id)}
+                        title="Restore Order"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        <Archive className="w-4 h-4" />
+                        <RotateCcw className="w-4 h-4" />
                       </Button>
+                    ) : (
+                      (order.status === "delivered" || order.status === "cancelled") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPendingArchive(order)}
+                          title="Archive Order"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <Archive className="w-4 h-4" />
+                        </Button>
+                      )
                     )}
                   </TableCell>
                 </TableRow>
@@ -274,7 +311,7 @@ export default function AdminOrders() {
         </DialogContent>
       </Dialog>
 
-      {/* ARCHIVE / DELETE CONFIRMATION POPUP */}
+      {/* ARCHIVE CONFIRMATION POPUP */}
       <Dialog open={!!pendingArchive} onOpenChange={(open) => !open && setPendingArchive(null)}>
         <DialogContent className="max-w-md rounded-none border-border">
           <DialogHeader>
@@ -361,14 +398,24 @@ export default function AdminOrders() {
                     <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Total (Cash on Delivery)</span>
                     <span className="font-serif font-bold text-lg">{formatPKR(selected.totalAmount)}</span>
                   </div>
-                  {(selected.status === "delivered" || selected.status === "cancelled") && (
+                  {selected.isArchived ? (
                     <Button
                       variant="outline"
-                      className="w-full rounded-none uppercase font-bold text-xs mt-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={() => setPendingArchive(selected)}
+                      className="w-full rounded-none uppercase font-bold text-xs mt-2"
+                      onClick={() => handleUnarchiveOrder(selected.id)}
                     >
-                      <Archive className="w-4 h-4 mr-2" /> Archive Order
+                      <RotateCcw className="w-4 h-4 mr-2" /> Restore Order
                     </Button>
+                  ) : (
+                    (selected.status === "delivered" || selected.status === "cancelled") && (
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-none uppercase font-bold text-xs mt-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => setPendingArchive(selected)}
+                      >
+                        <Archive className="w-4 h-4 mr-2" /> Archive Order
+                      </Button>
+                    )
                   )}
                 </div>
               </div>
