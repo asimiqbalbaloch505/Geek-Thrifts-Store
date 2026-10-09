@@ -298,18 +298,34 @@ function TieSizeGuide() {
 function resolveSizeInventory(product: any): SizeInventoryItem[] {
   if (!product) return [];
 
+  // Check all possible key mappings from API/DB
   let directInv = product.sizeInventory ?? product.size_inventory;
+
   if (typeof directInv === "string") {
     try {
       directInv = JSON.parse(directInv);
     } catch {
-      directInv = [];
+      directInv = null;
     }
   }
+
+  // 1. If sizeInventory is an Array of objects: [{ size: "28", qty: 1 }]
   if (Array.isArray(directInv) && directInv.length > 0) {
-    return directInv;
+    return directInv.map((item: any) => ({
+      size: String(item.size),
+      qty: Number(item.qty ?? item.quantity ?? 0),
+    }));
   }
 
+  // 2. If sizeInventory is a Key-Value Object: { "28": 1, "30": 2 }
+  if (directInv && typeof directInv === "object" && !Array.isArray(directInv)) {
+    return Object.entries(directInv).map(([size, qty]) => ({
+      size: String(size),
+      qty: Number(qty ?? 0),
+    }));
+  }
+
+  // 3. Fallback only if no size_inventory exists at all
   let rawSizes = product.sizes ?? product.category?.sizes ?? product.categorySizes;
   if (typeof rawSizes === "string") {
     try {
@@ -320,7 +336,7 @@ function resolveSizeInventory(product: any): SizeInventoryItem[] {
   }
 
   if (Array.isArray(rawSizes) && rawSizes.length > 0) {
-    const totalStock = product.stock ?? 1;
+    const totalStock = product.stock ?? 0;
     return rawSizes.map((sz: string) => ({
       size: String(sz),
       qty: totalStock > 0 ? totalStock : 0,
