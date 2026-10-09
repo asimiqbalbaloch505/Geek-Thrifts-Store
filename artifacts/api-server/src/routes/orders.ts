@@ -22,6 +22,7 @@ function mapOrder(order: typeof ordersTable.$inferSelect) {
   };
 }
 
+// 1. GET ALL ORDERS
 router.get("/", async (req, res): Promise<void> => {
   const parsed = ListOrdersQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -41,6 +42,7 @@ router.get("/", async (req, res): Promise<void> => {
   }
 });
 
+// 2. CREATE ORDER (Deducts stock and size inventory)
 router.post("/", async (req, res): Promise<void> => {
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) {
@@ -91,38 +93,38 @@ router.post("/", async (req, res): Promise<void> => {
         const product = item.currentProduct;
         const newStock = Math.max(0, product.stock - item.quantity);
 
-        let sizeInv: Array<{ size: string; qty: number }> = [];
-
         let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
         if (typeof rawInv === "string") {
-          try {
-            rawInv = JSON.parse(rawInv);
-          } catch {
-            rawInv = [];
-          }
+          try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
         }
+
+        let updatedInv = rawInv;
 
         if (Array.isArray(rawInv)) {
-          sizeInv = rawInv.map((s: any) => ({
-            size: String(s.size),
-            qty: Number(s.qty ?? 0),
-          }));
-        }
-
-        if (sizeInv.length > 0) {
-          sizeInv = sizeInv.map((s) => {
-            if (s.size.toLowerCase() === item.size.toLowerCase()) {
-              return { ...s, qty: Math.max(0, s.qty - item.quantity) };
+          updatedInv = rawInv.map((s: any) => {
+            const sizeName = String(s.size ?? s.label ?? "").trim();
+            const targetSize = String(item.size).trim();
+            if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
+              const currentQty = Number(s.qty ?? s.quantity ?? 0);
+              return { ...s, qty: Math.max(0, currentQty - item.quantity) };
             }
             return s;
           });
+        } else if (rawInv && typeof rawInv === "object") {
+          updatedInv = { ...rawInv };
+          const targetSize = String(item.size).trim();
+          const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
+          if (foundKey) {
+            const currentQty = Number(updatedInv[foundKey] ?? 0);
+            updatedInv[foundKey] = Math.max(0, currentQty - item.quantity);
+          }
         }
 
         await db
           .update(productsTable)
           .set({
             stock: newStock,
-            sizeInventory: sizeInv.length > 0 ? (sizeInv as any) : (product as any).sizeInventory,
+            sizeInventory: updatedInv,
           })
           .where(eq(productsTable.id, item.productId));
       })
@@ -147,6 +149,7 @@ router.post("/", async (req, res): Promise<void> => {
   }
 });
 
+// 3. GET SINGLE ORDER BY ID
 router.get("/:id", async (req, res): Promise<void> => {
   const paramsParsed = GetOrderParams.safeParse({ id: Number(req.params.id) });
   if (!paramsParsed.success) {
@@ -166,6 +169,7 @@ router.get("/:id", async (req, res): Promise<void> => {
   }
 });
 
+// 4. UPDATE ORDER STATUS (Handles inventory restoration on cancellation)
 router.put("/:id", async (req, res): Promise<void> => {
   const paramsParsed = UpdateOrderStatusParams.safeParse({ id: Number(req.params.id) });
   if (!paramsParsed.success) {
@@ -178,7 +182,6 @@ router.put("/:id", async (req, res): Promise<void> => {
     return;
   }
   try {
-    // 1. Fetch current order state before updating
     const [existingOrder] = await db
       .select()
       .from(ordersTable)
@@ -190,95 +193,104 @@ router.put("/:id", async (req, res): Promise<void> => {
       return;
     }
 
-    const previousStatus = existingOrder.status;
-    const newStatus = parsed.data.status;
+    const previousStatus = String(existingOrder.status ?? "").trim().toLowerCase();
+    const newStatus = String(parsed.data.status ?? "").trim().toLowerCase();
 
-    // 2. Perform the order status update
     const [updated] = await db
       .update(ordersTable)
-      .set({ status: newStatus })
+      .set({ status: parsed.data.status })
       .where(eq(ordersTable.id, paramsParsed.data.id))
       .returning();
 
-    // 3. Handle stock restoration on cancellation (or re-deduction on uncancellation)
     const items = existingOrder.items as Array<{ productId: number; quantity: number; size: string }>;
 
+    // RESTORE INVENTORY when transitioning to "cancelled"
     if (previousStatus !== "cancelled" && newStatus === "cancelled") {
-      // Order was CANCELLED -> Restore stock and size_inventory
       await Promise.all(
         items.map(async (item) => {
           const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
           if (!product) return;
 
-          const newStock = product.stock + item.quantity;
-          let sizeInv: Array<{ size: string; qty: number }> = [];
+          const restoredStock = Number(product.stock ?? 0) + Number(item.quantity ?? 0);
 
           let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
           if (typeof rawInv === "string") {
-            try { rawInv = JSON.parse(rawInv); } catch { rawInv = []; }
+            try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
           }
+
+          let updatedInv = rawInv;
 
           if (Array.isArray(rawInv)) {
-            sizeInv = rawInv.map((s: any) => ({
-              size: String(s.size),
-              qty: Number(s.qty ?? 0),
-            }));
-          }
-
-          if (sizeInv.length > 0) {
-            sizeInv = sizeInv.map((s) => {
-              if (s.size.toLowerCase() === item.size.toLowerCase()) {
-                return { ...s, qty: s.qty + item.quantity };
+            updatedInv = rawInv.map((s: any) => {
+              const sizeName = String(s.size ?? s.label ?? "").trim();
+              const targetSize = String(item.size).trim();
+              if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
+                const currentQty = Number(s.qty ?? s.quantity ?? 0);
+                return { ...s, qty: currentQty + Number(item.quantity ?? 0) };
               }
               return s;
             });
+          } else if (rawInv && typeof rawInv === "object") {
+            updatedInv = { ...rawInv };
+            const targetSize = String(item.size).trim();
+            const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
+            if (foundKey) {
+              const currentQty = Number(updatedInv[foundKey] ?? 0);
+              updatedInv[foundKey] = currentQty + Number(item.quantity ?? 0);
+            }
           }
 
           await db
             .update(productsTable)
             .set({
-              stock: newStock,
-              sizeInventory: sizeInv.length > 0 ? (sizeInv as any) : (product as any).sizeInventory,
+              stock: restoredStock,
+              sizeInventory: updatedInv,
             })
             .where(eq(productsTable.id, item.productId));
         })
       );
-    } else if (previousStatus === "cancelled" && newStatus !== "cancelled") {
-      // Order was RE-ACTIVATED -> Re-deduct stock and size_inventory
+    } 
+    // RE-DEDUCT INVENTORY if changing back from "cancelled" to active
+    else if (previousStatus === "cancelled" && newStatus !== "cancelled") {
       await Promise.all(
         items.map(async (item) => {
           const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
           if (!product) return;
 
-          const newStock = Math.max(0, product.stock - item.quantity);
-          let sizeInv: Array<{ size: string; qty: number }> = [];
+          const newStock = Math.max(0, Number(product.stock ?? 0) - Number(item.quantity ?? 0));
 
           let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
           if (typeof rawInv === "string") {
-            try { rawInv = JSON.parse(rawInv); } catch { rawInv = []; }
+            try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
           }
+
+          let updatedInv = rawInv;
 
           if (Array.isArray(rawInv)) {
-            sizeInv = rawInv.map((s: any) => ({
-              size: String(s.size),
-              qty: Number(s.qty ?? 0),
-            }));
-          }
-
-          if (sizeInv.length > 0) {
-            sizeInv = sizeInv.map((s) => {
-              if (s.size.toLowerCase() === item.size.toLowerCase()) {
-                return { ...s, qty: Math.max(0, s.qty - item.quantity) };
+            updatedInv = rawInv.map((s: any) => {
+              const sizeName = String(s.size ?? s.label ?? "").trim();
+              const targetSize = String(item.size).trim();
+              if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
+                const currentQty = Number(s.qty ?? s.quantity ?? 0);
+                return { ...s, qty: Math.max(0, currentQty - Number(item.quantity ?? 0)) };
               }
               return s;
             });
+          } else if (rawInv && typeof rawInv === "object") {
+            updatedInv = { ...rawInv };
+            const targetSize = String(item.size).trim();
+            const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
+            if (foundKey) {
+              const currentQty = Number(updatedInv[foundKey] ?? 0);
+              updatedInv[foundKey] = Math.max(0, currentQty - Number(item.quantity ?? 0));
+            }
           }
 
           await db
             .update(productsTable)
             .set({
               stock: newStock,
-              sizeInventory: sizeInv.length > 0 ? (sizeInv as any) : (product as any).sizeInventory,
+              sizeInventory: updatedInv,
             })
             .where(eq(productsTable.id, item.productId));
         })
@@ -300,6 +312,32 @@ router.put("/:id", async (req, res): Promise<void> => {
     }).catch((err) => req.log.error({ err }, "Failed to send status update emails"));
   } catch (err) {
     req.log.error({ err }, "Failed to update order status");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// 5. ARCHIVE ORDER (Soft Delete)
+router.patch("/:id/archive", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid order ID" });
+    return;
+  }
+  try {
+    const [updated] = await db
+      .update(ordersTable)
+      .set({ isArchived: true } as any)
+      .where(eq(ordersTable.id, id))
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+
+    res.json({ success: true, message: "Order archived successfully", order: mapOrder(updated) });
+  } catch (err) {
+    req.log.error({ err }, "Failed to archive order");
     res.status(500).json({ error: "Internal server error" });
   }
 });

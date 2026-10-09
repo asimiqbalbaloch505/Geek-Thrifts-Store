@@ -22,9 +22,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { Archive, Trash2, AlertTriangle } from "lucide-react";
 
 type Order = {
   id: number;
@@ -37,6 +41,7 @@ type Order = {
   status: string;
   totalAmount: number;
   createdAt: string;
+  isArchived?: boolean;
   items: Array<{ productId: number; productName: string; quantity: number; size: string; price: number }>;
 };
 
@@ -50,6 +55,17 @@ const STATUS_COLORS: Record<string, string> = {
 export default function AdminOrders() {
   const [filter, setFilter] = useState<ListOrdersStatus | undefined>(undefined);
   const [selected, setSelected] = useState<Order | null>(null);
+
+  // Status Change Confirmation State
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    orderId: number;
+    newStatus: UpdateOrderStatusBodyStatus;
+    orderNumber: string;
+  } | null>(null);
+
+  // Archive Confirmation State
+  const [pendingArchive, setPendingArchive] = useState<Order | null>(null);
+
   const queryClient = useQueryClient();
   const updateStatus = useUpdateOrderStatus();
 
@@ -61,21 +77,60 @@ export default function AdminOrders() {
   const { data: products } = useListProducts();
 
   const productImageMap = Object.fromEntries(
-    (products ?? []).map(p => [p.id, p.imageUrl ?? null])
+    (products ?? []).map((p) => [p.id, p.imageUrl ?? null])
   );
 
-  const handleStatusChange = (orderId: number, newStatus: UpdateOrderStatusBodyStatus) => {
+  // Initiate status change request (opens popup)
+  const requestStatusChange = (order: Order, newStatus: UpdateOrderStatusBodyStatus) => {
+    if (order.status === newStatus) return;
+    setPendingStatusChange({
+      orderId: order.id,
+      newStatus,
+      orderNumber: order.id.toString().padStart(5, "0"),
+    });
+  };
+
+  // Confirm status update execution
+  const confirmStatusChange = () => {
+    if (!pendingStatusChange) return;
+
     updateStatus.mutate(
-      { id: orderId, data: { status: newStatus } },
+      { id: pendingStatusChange.orderId, data: { status: pendingStatusChange.newStatus } },
       {
         onSuccess: (updated) => {
           queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
-          if (selected?.id === orderId) {
+          if (selected?.id === pendingStatusChange.orderId) {
             setSelected({ ...selected, status: updated.status });
           }
-        }
+          setPendingStatusChange(null);
+        },
+        onError: () => {
+          setPendingStatusChange(null);
+        },
       }
     );
+  };
+
+  // Archive / Soft Delete Handler
+  const confirmArchiveOrder = async () => {
+    if (!pendingArchive) return;
+    try {
+      // Call backend API to archive
+      await fetch(`/api/orders/${pendingArchive.id}/archive`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isArchived: true }),
+      });
+
+      queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+      if (selected?.id === pendingArchive.id) {
+        setSelected(null);
+      }
+    } catch (err) {
+      console.error("Failed to archive order", err);
+    } finally {
+      setPendingArchive(null);
+    }
   };
 
   const tabs: { label: string; value: ListOrdersStatus | undefined }[] = [
@@ -86,17 +141,20 @@ export default function AdminOrders() {
     { label: "Cancelled", value: "cancelled" },
   ];
 
+  // Filter out archived orders from active list
+  const activeOrders = (orders as Order[])?.filter((o) => !o.isArchived) ?? [];
+
   return (
     <AdminLayout>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8">
         <div>
           <h1 className="font-serif text-3xl font-bold uppercase tracking-tighter mb-2">Orders</h1>
-          <p className="text-muted-foreground text-sm">Tap any order to see full details.</p>
+          <p className="text-muted-foreground text-sm">Manage incoming store orders and track fulfillment.</p>
         </div>
       </div>
 
       <div className="flex overflow-x-auto border-b border-border mb-6 gap-8 pb-[-1px]">
-        {tabs.map(tab => (
+        {tabs.map((tab) => (
           <button
             key={tab.label}
             onClick={() => setFilter(tab.value)}
@@ -114,8 +172,8 @@ export default function AdminOrders() {
       <div className="border border-border bg-card overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest">Loading...</div>
-        ) : !orders || orders.length === 0 ? (
-          <div className="p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest">No orders found</div>
+        ) : activeOrders.length === 0 ? (
+          <div className="p-12 text-center text-muted-foreground font-sans text-sm uppercase tracking-widest">No active orders found</div>
         ) : (
           <Table>
             <TableHeader>
@@ -126,17 +184,18 @@ export default function AdminOrders() {
                 <TableHead className="h-12 px-4 text-left align-middle font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Total</TableHead>
                 <TableHead className="h-12 px-4 text-left align-middle font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Items</TableHead>
                 <TableHead className="h-12 px-4 text-right align-middle font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Status</TableHead>
+                <TableHead className="h-12 px-4 text-right align-middle font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(orders as Order[]).map((order) => (
+              {activeOrders.map((order) => (
                 <TableRow
                   key={order.id}
                   className="border-b border-border hover:bg-muted/60 transition-colors cursor-pointer"
                   onClick={() => setSelected(order)}
                 >
                   <TableCell className="p-4 align-middle font-mono font-bold text-sm">
-                    #{order.id.toString().padStart(5, '0')}
+                    #{order.id.toString().padStart(5, "0")}
                   </TableCell>
                   <TableCell className="p-4 align-middle text-sm text-muted-foreground">
                     {format(new Date(order.createdAt), "MMM d, yyyy")}
@@ -150,12 +209,12 @@ export default function AdminOrders() {
                     {formatPKR(order.totalAmount)}
                   </TableCell>
                   <TableCell className="p-4 align-middle text-sm text-muted-foreground">
-                    {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                    {order.items.length} item{order.items.length !== 1 ? "s" : ""}
                   </TableCell>
-                  <TableCell className="p-4 align-middle text-right" onClick={e => e.stopPropagation()}>
+                  <TableCell className="p-4 align-middle text-right" onClick={(e) => e.stopPropagation()}>
                     <Select
                       value={order.status}
-                      onValueChange={(val) => handleStatusChange(order.id, val as UpdateOrderStatusBodyStatus)}
+                      onValueChange={(val) => requestStatusChange(order, val as UpdateOrderStatusBodyStatus)}
                       disabled={updateStatus.isPending}
                     >
                       <SelectTrigger className="w-[140px] ml-auto h-8 rounded-none border-border text-xs font-bold uppercase tracking-wider">
@@ -169,6 +228,19 @@ export default function AdminOrders() {
                       </SelectContent>
                     </Select>
                   </TableCell>
+                  <TableCell className="p-4 align-middle text-right" onClick={(e) => e.stopPropagation()}>
+                    {(order.status === "delivered" || order.status === "cancelled") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPendingArchive(order)}
+                        title="Archive Order"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Archive className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -176,7 +248,57 @@ export default function AdminOrders() {
         )}
       </div>
 
-      {/* Order Detail Modal */}
+      {/* STATUS CHANGE CONFIRMATION POPUP */}
+      <Dialog open={!!pendingStatusChange} onOpenChange={(open) => !open && setPendingStatusChange(null)}>
+        <DialogContent className="max-w-md rounded-none border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold font-serif uppercase tracking-tight">
+              <AlertTriangle className="w-5 h-5 text-amber-600" /> Confirm Status Change
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground pt-2">
+              Are you sure you want to change Order <strong>#{pendingStatusChange?.orderNumber}</strong> status to{" "}
+              <span className="uppercase font-bold text-foreground">{pendingStatusChange?.newStatus}</span>?
+              {pendingStatusChange?.newStatus === "cancelled" && (
+                <span className="block mt-2 text-destructive font-semibold">
+                  ⚠️ Marking this order as CANCELLED will automatically restore item quantities back to product inventory.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-6 flex gap-3">
+            <Button variant="outline" className="rounded-none uppercase font-bold text-xs" onClick={() => setPendingStatusChange(null)}>
+              Cancel
+            </Button>
+            <Button className="rounded-none uppercase font-bold text-xs" disabled={updateStatus.isPending} onClick={confirmStatusChange}>
+              {updateStatus.isPending ? "Updating..." : "Confirm Update"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ARCHIVE / DELETE CONFIRMATION POPUP */}
+      <Dialog open={!!pendingArchive} onOpenChange={(open) => !open && setPendingArchive(null)}>
+        <DialogContent className="max-w-md rounded-none border-border">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold font-serif uppercase tracking-tight">
+              <Trash2 className="w-5 h-5 text-destructive" /> Archive Order #{pendingArchive?.id.toString().padStart(5, "0")}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground pt-2">
+              Archiving hides this completed/cancelled order from your main view. Financial revenue metrics will remain preserved.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-6 flex gap-3">
+            <Button variant="outline" className="rounded-none uppercase font-bold text-xs" onClick={() => setPendingArchive(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" className="rounded-none uppercase font-bold text-xs" onClick={confirmArchiveOrder}>
+              Archive Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ORDER DETAIL MODAL */}
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="max-w-xl rounded-none border-border p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col">
           {selected && (
@@ -184,7 +306,7 @@ export default function AdminOrders() {
               <DialogHeader className="px-6 py-5 border-b border-border shrink-0">
                 <div className="flex items-center justify-between">
                   <DialogTitle className="font-serif text-xl font-bold uppercase tracking-tighter">
-                    Order #{selected.id.toString().padStart(5, '0')}
+                    Order #{selected.id.toString().padStart(5, "0")}
                   </DialogTitle>
                   <span className={`text-[10px] font-bold uppercase tracking-widest border px-2 py-1 ${STATUS_COLORS[selected.status] ?? ""}`}>
                     {selected.status}
@@ -201,13 +323,9 @@ export default function AdminOrders() {
                   <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-3">Customer</p>
                   <div className="font-bold text-sm mb-0.5">{selected.customerName}</div>
                   <div className="text-sm text-muted-foreground">{selected.customerPhone}</div>
-                  {selected.customerEmail && (
-                    <div className="text-sm text-muted-foreground">{selected.customerEmail}</div>
-                  )}
+                  {selected.customerEmail && <div className="text-sm text-muted-foreground">{selected.customerEmail}</div>}
                   <div className="text-sm text-muted-foreground mt-1">{selected.customerAddress}, {selected.customerCity}</div>
-                  {selected.notes && (
-                    <div className="mt-2 text-xs text-muted-foreground italic border-l-2 border-border pl-3">{selected.notes}</div>
-                  )}
+                  {selected.notes && <div className="mt-2 text-xs text-muted-foreground italic border-l-2 border-border pl-3">{selected.notes}</div>}
                 </div>
 
                 {/* Items */}
@@ -239,30 +357,21 @@ export default function AdminOrders() {
                   </div>
                 </div>
 
-                {/* Total + Status */}
+                {/* Total + Actions */}
                 <div className="px-6 py-4">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Total (Cash on Delivery)</span>
                     <span className="font-serif font-bold text-lg">{formatPKR(selected.totalAmount)}</span>
                   </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-2">Update Status</p>
-                    <Select
-                      value={selected.status}
-                      onValueChange={(val) => handleStatusChange(selected.id, val as UpdateOrderStatusBodyStatus)}
-                      disabled={updateStatus.isPending}
+                  {(selected.status === "delivered" || selected.status === "cancelled") && (
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-none uppercase font-bold text-xs mt-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={() => setPendingArchive(selected)}
                     >
-                      <SelectTrigger className="w-full h-11 rounded-none border-border text-xs font-bold uppercase tracking-wider">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-none border-border">
-                        <SelectItem value="pending" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Pending</SelectItem>
-                        <SelectItem value="confirmed" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Confirmed</SelectItem>
-                        <SelectItem value="delivered" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Delivered</SelectItem>
-                        <SelectItem value="cancelled" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                      <Archive className="w-4 h-4 mr-2" /> Archive Order
+                    </Button>
+                  )}
                 </div>
               </div>
             </>
