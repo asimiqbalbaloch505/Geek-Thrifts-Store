@@ -318,29 +318,158 @@ router.put("/:id", async (req, res): Promise<void> => {
 
 // 5. ARCHIVE ORDER (Soft Delete)
 // ARCHIVE ORDER (Soft Delete) - Using PUT to avoid 405 Method Not Allowed
-router.put("/:id/archive", async (req, res): Promise<void> => {
-  const id = Number(req.params.id);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid order ID" });
+router.put("/:id", async (req, res): Promise<void> => {
+  const paramsParsed = GetOrderParams.safeParse({ id: Number(req.params.id) });
+  if (!paramsParsed.success) {
+    res.status(400).json({ error: "Invalid id" });
     return;
   }
+
   try {
-    const isArchived = req.body.isArchived ?? true;
+    const [existingOrder] = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.id, paramsParsed.data.id))
+      .limit(1);
 
-    const [updated] = await db
-      .update(ordersTable)
-      .set({ isArchived } as any)
-      .where(eq(ordersTable.id, id))
-      .returning();
-
-    if (!updated) {
+    if (!existingOrder) {
       res.status(404).json({ error: "Order not found" });
       return;
     }
 
-    res.json({ success: true, message: "Order archive status updated", order: mapOrder(updated) });
+    // Prepare update object
+    const updateData: Record<string, any> = {};
+
+    if (req.body.isArchived !== undefined) {
+      updateData.isArchived = Boolean(req.body.isArchived);
+    }
+
+    if (req.body.status !== undefined) {
+      updateData.status = req.body.status;
+    }
+
+    const previousStatus = String(existingOrder.status ?? "").trim().toLowerCase();
+    const newStatus = String(req.body.status ?? previousStatus).trim().toLowerCase();
+
+    // Perform database update
+    const [updated] = await db
+      .update(ordersTable)
+      .set(updateData)
+      .where(eq(ordersTable.id, paramsParsed.data.id))
+      .returning();
+
+    const items = existingOrder.items as Array<{ productId: number; quantity: number; size: string }>;
+
+    // RESTORE INVENTORY on cancellation
+    if (previousStatus !== "cancelled" && newStatus === "cancelled") {
+      await Promise.all(
+        items.map(async (item) => {
+          const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
+          if (!product) return;
+
+          const restoredStock = Number(product.stock ?? 0) + Number(item.quantity ?? 0);
+
+          let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
+          if (typeof rawInv === "string") {
+            try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
+          }
+
+          let updatedInv = rawInv;
+
+          if (Array.isArray(rawInv)) {
+            updatedInv = rawInv.map((s: any) => {
+              const sizeName = String(s.size ?? s.label ?? "").trim();
+              const targetSize = String(item.size).trim();
+              if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
+                const currentQty = Number(s.qty ?? s.quantity ?? 0);
+                return { ...s, qty: currentQty + Number(item.quantity ?? 0) };
+              }
+              return s;
+            });
+          } else if (rawInv && typeof rawInv === "object") {
+            updatedInv = { ...rawInv };
+            const targetSize = String(item.size).trim();
+            const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
+            if (foundKey) {
+              const currentQty = Number(updatedInv[foundKey] ?? 0);
+              updatedInv[foundKey] = currentQty + Number(item.quantity ?? 0);
+            }
+          }
+
+          await db
+            .update(productsTable)
+            .set({
+              stock: restoredStock,
+              sizeInventory: updatedInv,
+            })
+            .where(eq(productsTable.id, item.productId));
+        })
+      );
+    } 
+    // RE-DEDUCT INVENTORY on reactivation
+    else if (previousStatus === "cancelled" && newStatus !== "cancelled") {
+      await Promise.all(
+        items.map(async (item) => {
+          const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
+          if (!product) return;
+
+          const newStock = Math.max(0, Number(product.stock ?? 0) - Number(item.quantity ?? 0));
+
+          let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
+          if (typeof rawInv === "string") {
+            try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
+          }
+
+          let updatedInv = rawInv;
+
+          if (Array.isArray(rawInv)) {
+            updatedInv = rawInv.map((s: any) => {
+              const sizeName = String(s.size ?? s.label ?? "").trim();
+              const targetSize = String(item.size).trim();
+              if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
+                const currentQty = Number(s.qty ?? s.quantity ?? 0);
+                return { ...s, qty: Math.max(0, currentQty - Number(item.quantity ?? 0)) };
+              }
+              return s;
+            });
+          } else if (rawInv && typeof rawInv === "object") {
+            updatedInv = { ...rawInv };
+            const targetSize = String(item.size).trim();
+            const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
+            if (foundKey) {
+              const currentQty = Number(updatedInv[foundKey] ?? 0);
+              updatedInv[foundKey] = Math.max(0, currentQty - Number(item.quantity ?? 0));
+            }
+          }
+
+          await db
+            .update(productsTable)
+            .set({
+              stock: newStock,
+              sizeInventory: updatedInv,
+            })
+            .where(eq(productsTable.id, item.productId));
+        })
+      );
+    }
+
+    res.json(mapOrder(updated));
+
+    if (req.body.status) {
+      sendStatusUpdateEmails({
+        id: updated.id,
+        customerName: updated.customerName,
+        customerEmail: updated.customerEmail,
+        customerPhone: updated.customerPhone,
+        customerAddress: updated.customerAddress,
+        customerCity: updated.customerCity,
+        totalAmount: Number(updated.totalAmount),
+        status: updated.status,
+        items: updated.items as Array<{ productName: string; quantity: number; size: string; price: number }>,
+      }).catch((err) => req.log.error({ err }, "Failed to send status update emails"));
+    }
   } catch (err) {
-    req.log.error({ err }, "Failed to archive order");
+    req.log.error({ err }, "Failed to update order");
     res.status(500).json({ error: "Internal server error" });
   }
 });

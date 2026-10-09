@@ -114,8 +114,8 @@ export default function AdminOrders() {
  const confirmArchiveOrder = async () => {
   if (!pendingArchive) return;
   try {
-    await fetch(`/api/orders/${pendingArchive.id}/archive`, {
-      method: "PUT", // 👈 Changed from PATCH to PUT
+    await fetch(`/api/orders/${pendingArchive.id}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isArchived: true }),
     });
