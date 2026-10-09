@@ -167,8 +167,6 @@ router.get("/:id", async (req, res): Promise<void> => {
   }
 });
 
-// 4. SHARED UPDATE ORDER HANDLER (Status Change, Inventory Sync & Archiving)
-// Shared update order handler
 // Shared update order handler
 async function handleUpdateOrder(req: any, res: any): Promise<void> {
   const id = Number(req.params.id);
@@ -192,7 +190,7 @@ async function handleUpdateOrder(req: any, res: any): Promise<void> {
     const previousStatus = String(existingOrder.status ?? "").trim().toLowerCase();
     const newStatus = req.body.status ? String(req.body.status).trim().toLowerCase() : previousStatus;
 
-    // Build update payload
+    // Prepare update payload
     const updateData: Record<string, any> = {};
 
     if (req.body.status !== undefined) {
@@ -203,7 +201,12 @@ async function handleUpdateOrder(req: any, res: any): Promise<void> {
       updateData.isArchived = Boolean(req.body.isArchived);
     }
 
-    // Direct database update
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({ error: "No update fields provided" });
+      return;
+    }
+
+    // Perform database update
     const [updatedOrder] = await db
       .update(ordersTable)
       .set(updateData)
@@ -215,99 +218,109 @@ async function handleUpdateOrder(req: any, res: any): Promise<void> {
       return;
     }
 
-    const items = existingOrder.items as Array<{ productId: number; quantity: number; size: string }>;
+    // ONLY RUN INVENTORY SYNC IF STATUS ACTUALLY CHANGED
+    if (req.body.status !== undefined && previousStatus !== newStatus) {
+      let items: Array<{ productId: number; quantity: number; size: string }> = [];
+      try {
+        items = typeof existingOrder.items === "string" ? JSON.parse(existingOrder.items) : (existingOrder.items as any);
+      } catch {
+        items = [];
+      }
 
-    // RESTORE INVENTORY when transitioning to "cancelled"
-    if (previousStatus !== "cancelled" && newStatus === "cancelled") {
-      await Promise.all(
-        items.map(async (item) => {
-          const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
-          if (!product) return;
+      if (Array.isArray(items)) {
+        // RESTORE INVENTORY on cancellation
+        if (previousStatus !== "cancelled" && newStatus === "cancelled") {
+          await Promise.all(
+            items.map(async (item) => {
+              const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
+              if (!product) return;
 
-          const restoredStock = Number(product.stock ?? 0) + Number(item.quantity ?? 0);
+              const restoredStock = Number(product.stock ?? 0) + Number(item.quantity ?? 0);
 
-          let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
-          if (typeof rawInv === "string") {
-            try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
-          }
-
-          let updatedInv = rawInv;
-
-          if (Array.isArray(rawInv)) {
-            updatedInv = rawInv.map((s: any) => {
-              const sizeName = String(s.size ?? s.label ?? "").trim();
-              const targetSize = String(item.size).trim();
-              if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
-                const currentQty = Number(s.qty ?? s.quantity ?? 0);
-                return { ...s, qty: currentQty + Number(item.quantity ?? 0) };
+              let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
+              if (typeof rawInv === "string") {
+                try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
               }
-              return s;
-            });
-          } else if (rawInv && typeof rawInv === "object") {
-            updatedInv = { ...rawInv };
-            const targetSize = String(item.size).trim();
-            const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
-            if (foundKey) {
-              const currentQty = Number(updatedInv[foundKey] ?? 0);
-              updatedInv[foundKey] = currentQty + Number(item.quantity ?? 0);
-            }
-          }
 
-          await db
-            .update(productsTable)
-            .set({
-              stock: restoredStock,
-              sizeInventory: updatedInv,
-            })
-            .where(eq(productsTable.id, item.productId));
-        })
-      );
-    } 
-    // RE-DEDUCT INVENTORY on reactivation
-    else if (previousStatus === "cancelled" && newStatus !== "cancelled") {
-      await Promise.all(
-        items.map(async (item) => {
-          const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
-          if (!product) return;
+              let updatedInv = rawInv;
 
-          const newStock = Math.max(0, Number(product.stock ?? 0) - Number(item.quantity ?? 0));
-
-          let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
-          if (typeof rawInv === "string") {
-            try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
-          }
-
-          let updatedInv = rawInv;
-
-          if (Array.isArray(rawInv)) {
-            updatedInv = rawInv.map((s: any) => {
-              const sizeName = String(s.size ?? s.label ?? "").trim();
-              const targetSize = String(item.size).trim();
-              if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
-                const currentQty = Number(s.qty ?? s.quantity ?? 0);
-                return { ...s, qty: Math.max(0, currentQty - Number(item.quantity ?? 0)) };
+              if (Array.isArray(rawInv)) {
+                updatedInv = rawInv.map((s: any) => {
+                  const sizeName = String(s.size ?? s.label ?? "").trim();
+                  const targetSize = String(item.size).trim();
+                  if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
+                    const currentQty = Number(s.qty ?? s.quantity ?? 0);
+                    return { ...s, qty: currentQty + Number(item.quantity ?? 0) };
+                  }
+                  return s;
+                });
+              } else if (rawInv && typeof rawInv === "object") {
+                updatedInv = { ...rawInv };
+                const targetSize = String(item.size).trim();
+                const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
+                if (foundKey) {
+                  const currentQty = Number(updatedInv[foundKey] ?? 0);
+                  updatedInv[foundKey] = currentQty + Number(item.quantity ?? 0);
+                }
               }
-              return s;
-            });
-          } else if (rawInv && typeof rawInv === "object") {
-            updatedInv = { ...rawInv };
-            const targetSize = String(item.size).trim();
-            const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
-            if (foundKey) {
-              const currentQty = Number(updatedInv[foundKey] ?? 0);
-              updatedInv[foundKey] = Math.max(0, currentQty - Number(item.quantity ?? 0));
-            }
-          }
 
-          await db
-            .update(productsTable)
-            .set({
-              stock: newStock,
-              sizeInventory: updatedInv,
+              await db
+                .update(productsTable)
+                .set({
+                  stock: restoredStock,
+                  sizeInventory: updatedInv,
+                })
+                .where(eq(productsTable.id, item.productId));
             })
-            .where(eq(productsTable.id, item.productId));
-        })
-      );
+          );
+        } 
+        // RE-DEDUCT INVENTORY on reactivation
+        else if (previousStatus === "cancelled" && newStatus !== "cancelled") {
+          await Promise.all(
+            items.map(async (item) => {
+              const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
+              if (!product) return;
+
+              const newStock = Math.max(0, Number(product.stock ?? 0) - Number(item.quantity ?? 0));
+
+              let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
+              if (typeof rawInv === "string") {
+                try { rawInv = JSON.parse(rawInv); } catch { rawInv = null; }
+              }
+
+              let updatedInv = rawInv;
+
+              if (Array.isArray(rawInv)) {
+                updatedInv = rawInv.map((s: any) => {
+                  const sizeName = String(s.size ?? s.label ?? "").trim();
+                  const targetSize = String(item.size).trim();
+                  if (sizeName.toLowerCase() === targetSize.toLowerCase()) {
+                    const currentQty = Number(s.qty ?? s.quantity ?? 0);
+                    return { ...s, qty: Math.max(0, currentQty - Number(item.quantity ?? 0)) };
+                  }
+                  return s;
+                });
+              } else if (rawInv && typeof rawInv === "object") {
+                updatedInv = { ...rawInv };
+                const targetSize = String(item.size).trim();
+                const foundKey = Object.keys(updatedInv).find(k => k.trim().toLowerCase() === targetSize.toLowerCase());
+                if (foundKey) {
+                  const currentQty = Number(updatedInv[foundKey] ?? 0);
+                  updatedInv[foundKey] = Math.max(0, currentQty - Number(item.quantity ?? 0));
+                }
+              }
+
+              await db
+                .update(productsTable)
+                .set({
+                  stock: newStock,
+                  sizeInventory: updatedInv,
+                })
+                .where(eq(productsTable.id, item.productId));
+            })
+          );
+        }
+      }
     }
 
     res.json(mapOrder(updatedOrder));
