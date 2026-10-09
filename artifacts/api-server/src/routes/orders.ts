@@ -11,12 +11,13 @@ import {
 } from "@workspace/api-zod";
 import { sendOrderConfirmationEmails, sendStatusUpdateEmails } from "../lib/email.js";
 
-function mapOrder(order: typeof ordersTable.$inferSelect) {
+function mapOrder(order: any) {
   return {
     ...order,
+    isArchived: Boolean(order.isArchived ?? order.is_archived ?? false),
     totalAmount: Number(order.totalAmount),
-    createdAt: order.createdAt.toISOString(),
-    items: order.items as Array<{ productId: number; productName: string; quantity: number; size: string; price: number }>,
+    createdAt: order.createdAt instanceof Date ? order.createdAt.toISOString() : new Date(order.createdAt).toISOString(),
+    items: typeof order.items === "string" ? JSON.parse(order.items) : order.items,
   };
 }
 
@@ -28,12 +29,11 @@ router.get("/", async (req, res): Promise<void> => {
     return;
   }
   try {
-    let query = db.select().from(ordersTable).$dynamic();
-    if (parsed.data.status) {
-      query = query.where(eq(ordersTable.status, parsed.data.status));
-    }
-    const orders = await query.orderBy(ordersTable.createdAt);
-    res.json(orders.map(mapOrder));
+    const orders = await db.execute(
+      sql`SELECT id, customer_name as "customerName", customer_email as "customerEmail", customer_phone as "customerPhone", customer_address as "customerAddress", customer_city as "customerCity", notes, status, total_amount as "totalAmount", items, created_at as "createdAt", is_archived as "isArchived" FROM orders ORDER BY created_at DESC`
+    );
+
+    res.json(orders.rows.map(mapOrder));
   } catch (err) {
     req.log.error({ err }, "Failed to list orders");
     res.status(500).json({ error: "Internal server error" });
