@@ -13,8 +13,6 @@ import {
 } from "@workspace/api-zod";
 import { sendOrderConfirmationEmails, sendStatusUpdateEmails } from "../lib/email.js";
 
-
-
 function mapOrder(order: typeof ordersTable.$inferSelect) {
   return {
     ...order,
@@ -54,18 +52,26 @@ router.post("/", async (req, res): Promise<void> => {
       parsed.data.items.map(async (item) => {
         const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
         if (!product) throw new Error(`Product ${item.productId} not found`);
+
+        // Check if enough stock exists before creating order
+        if (product.stock < item.quantity) {
+          throw new Error(`Insufficient overall stock for ${product.name}`);
+        }
+
         return {
           productId: item.productId,
           productName: product.name,
           quantity: item.quantity,
           size: item.size,
           price: Number(product.price),
+          currentProduct: product, // Retain product reference for inventory update
         };
       })
     );
 
     const totalAmount = itemsWithDetails.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+    // Save the order to DB
     const [order] = await db
       .insert(ordersTable)
       .values({
@@ -77,9 +83,35 @@ router.post("/", async (req, res): Promise<void> => {
         notes: parsed.data.notes ?? null,
         status: "pending",
         totalAmount: String(totalAmount),
-        items: itemsWithDetails,
+        items: itemsWithDetails.map(({ currentProduct, ...item }) => item), // Strip internal currentProduct ref before saving items JSON
       })
       .returning();
+
+    // Deduct stock and size_inventory for each ordered item
+    await Promise.all(
+      itemsWithDetails.map(async (item) => {
+        const product = item.currentProduct;
+        const newStock = Math.max(0, product.stock - item.quantity);
+
+        let newSizeInventory = product.sizeInventory as Record<string, number> | null;
+
+        if (newSizeInventory && typeof newSizeInventory === "object") {
+          const currentSizeStock = Number(newSizeInventory[item.size] ?? 0);
+          newSizeInventory = {
+            ...newSizeInventory,
+            [item.size]: Math.max(0, currentSizeStock - item.quantity),
+          };
+        }
+
+        await db
+          .update(productsTable)
+          .set({
+            stock: newStock,
+            sizeInventory: newSizeInventory,
+          })
+          .where(eq(productsTable.id, item.productId));
+      })
+    );
 
     res.status(201).json(mapOrder(order));
 
@@ -96,7 +128,7 @@ router.post("/", async (req, res): Promise<void> => {
     }).catch((err) => req.log.error({ err }, "Failed to send order confirmation emails"));
   } catch (err) {
     req.log.error({ err }, "Failed to create order");
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: (err as Error).message || "Internal server error" });
   }
 });
 
