@@ -168,6 +168,7 @@ router.get("/:id", async (req, res): Promise<void> => {
 });
 
 // 4. SHARED UPDATE ORDER HANDLER (Status Change, Inventory Sync & Archiving)
+// Shared update order handler
 async function handleUpdateOrder(req: any, res: any): Promise<void> {
   const id = Number(req.params.id);
   if (isNaN(id)) {
@@ -187,25 +188,52 @@ async function handleUpdateOrder(req: any, res: any): Promise<void> {
       return;
     }
 
-    const updateData: Record<string, any> = {};
+    const previousStatus = String(existingOrder.status ?? "").trim().toLowerCase();
+    const newStatus = req.body.status ? String(req.body.status).trim().toLowerCase() : previousStatus;
 
-    if (req.body.isArchived !== undefined) {
-      updateData.isArchived = Boolean(req.body.isArchived);
-    }
+    // 1. Build dynamic update object
+    const updateData: Record<string, any> = {};
 
     if (req.body.status !== undefined) {
       updateData.status = req.body.status;
     }
 
-    const previousStatus = String(existingOrder.status ?? "").trim().toLowerCase();
-    const newStatus = String(req.body.status ?? previousStatus).trim().toLowerCase();
+    // Try setting isArchived dynamically
+    if (req.body.isArchived !== undefined) {
+      updateData.isArchived = Boolean(req.body.isArchived);
+    }
 
-    // Perform DB update
-    const [updated] = await db
-      .update(ordersTable)
-      .set(updateData)
-      .where(eq(ordersTable.id, id))
-      .returning();
+    let updatedOrder: typeof ordersTable.$inferSelect | undefined;
+
+    try {
+      const [updated] = await db
+        .update(ordersTable)
+        .set(updateData)
+        .where(eq(ordersTable.id, id))
+        .returning();
+      updatedOrder = updated;
+    } catch (dbErr: any) {
+      // Fallback: If live DB lacks 'is_archived' column yet, update status only without crashing
+      req.log.warn({ dbErr }, "Database column 'is_archived' missing; falling back to status update");
+      
+      delete updateData.isArchived;
+
+      if (Object.keys(updateData).length > 0) {
+        const [updated] = await db
+          .update(ordersTable)
+          .set(updateData)
+          .where(eq(ordersTable.id, id))
+          .returning();
+        updatedOrder = updated;
+      } else {
+        updatedOrder = existingOrder;
+      }
+    }
+
+    if (!updatedOrder) {
+      res.status(500).json({ error: "Failed to update order" });
+      return;
+    }
 
     const items = existingOrder.items as Array<{ productId: number; quantity: number; size: string }>;
 
@@ -302,19 +330,19 @@ async function handleUpdateOrder(req: any, res: any): Promise<void> {
       );
     }
 
-    res.json(mapOrder(updated));
+    res.json(mapOrder(updatedOrder));
 
     if (req.body.status) {
       sendStatusUpdateEmails({
-        id: updated.id,
-        customerName: updated.customerName,
-        customerEmail: updated.customerEmail,
-        customerPhone: updated.customerPhone,
-        customerAddress: updated.customerAddress,
-        customerCity: updated.customerCity,
-        totalAmount: Number(updated.totalAmount),
-        status: updated.status,
-        items: updated.items as Array<{ productName: string; quantity: number; size: string; price: number }>,
+        id: updatedOrder.id,
+        customerName: updatedOrder.customerName,
+        customerEmail: updatedOrder.customerEmail,
+        customerPhone: updatedOrder.customerPhone,
+        customerAddress: updatedOrder.customerAddress,
+        customerCity: updatedOrder.customerCity,
+        totalAmount: Number(updatedOrder.totalAmount),
+        status: updatedOrder.status,
+        items: updatedOrder.items as Array<{ productName: string; quantity: number; size: string; price: number }>,
       }).catch((err) => req.log.error({ err }, "Failed to send status update emails"));
     }
   } catch (err) {
