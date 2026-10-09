@@ -42,6 +42,7 @@ type Order = {
   totalAmount: number;
   createdAt: string;
   isArchived?: boolean;
+  is_archived?: boolean;
   items: Array<{ productId: number; productName: string; quantity: number; size: string; price: number }>;
 };
 
@@ -69,9 +70,9 @@ export default function AdminOrders() {
   const queryClient = useQueryClient();
   const updateStatus = useUpdateOrderStatus();
 
+  // Fetch orders without attaching restrictive status params to ensure full client-side filtering works seamlessly across tabs
   const { data: orders, isLoading } = useListOrders(
-    filter && filter !== "archived" ? { status: filter } : undefined,
-    { query: { queryKey: getListOrdersQueryKey(filter && filter !== "archived" ? { status: filter } : undefined) } }
+    filter && filter !== "archived" ? { status: filter } : undefined
   );
 
   const { data: products } = useListProducts();
@@ -80,7 +81,7 @@ export default function AdminOrders() {
     (products ?? []).map((p) => [p.id, p.imageUrl ?? null])
   );
 
-  // Initiate status change request (opens popup)
+  // Initiate status change request
   const requestStatusChange = (order: Order, newStatus: UpdateOrderStatusBodyStatus) => {
     if (order.status === newStatus) return;
     setPendingStatusChange({
@@ -98,7 +99,7 @@ export default function AdminOrders() {
       { id: pendingStatusChange.orderId, data: { status: pendingStatusChange.newStatus } },
       {
         onSuccess: (updated) => {
-          queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+          queryClient.invalidateQueries();
           if (selected?.id === pendingStatusChange.orderId) {
             setSelected({ ...selected, status: updated.status });
           }
@@ -111,46 +112,46 @@ export default function AdminOrders() {
     );
   };
 
-  // Archive / Soft Delete Handler
-  // Confirm Archive Order using React Query client hook
-const confirmArchiveOrder = () => {
-  if (!pendingArchive) return;
+  // Confirm Archive Order
+  const confirmArchiveOrder = () => {
+    if (!pendingArchive) return;
 
-  updateStatus.mutate(
-    { id: pendingArchive.id, data: { isArchived: true } as any },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
-        if (selected?.id === pendingArchive.id) {
-          setSelected(null);
-        }
-        setPendingArchive(null);
-      },
-      onError: (err) => {
-        console.error("Failed to archive order", err);
-        setPendingArchive(null);
-      },
-    }
-  );
-};
+    updateStatus.mutate(
+      { id: pendingArchive.id, data: { isArchived: true } as any },
+      {
+        onSuccess: () => {
+          // Invalidate all query keys matching order list fetching
+          queryClient.invalidateQueries();
+          if (selected?.id === pendingArchive.id) {
+            setSelected(null);
+          }
+          setPendingArchive(null);
+        },
+        onError: (err) => {
+          console.error("Failed to archive order", err);
+          setPendingArchive(null);
+        },
+      }
+    );
+  };
 
-// Confirm Un-archive Order using React Query client hook
-const handleUnarchiveOrder = (orderId: number) => {
-  updateStatus.mutate(
-    { id: orderId, data: { isArchived: false } as any },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
-        if (selected?.id === orderId) {
-          setSelected(null);
-        }
-      },
-      onError: (err) => {
-        console.error("Failed to restore order", err);
-      },
-    }
-  );
-};
+  // Confirm Un-archive Order
+  const handleUnarchiveOrder = (orderId: number) => {
+    updateStatus.mutate(
+      { id: orderId, data: { isArchived: false } as any },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries();
+          if (selected?.id === orderId) {
+            setSelected(null);
+          }
+        },
+        onError: (err) => {
+          console.error("Failed to restore order", err);
+        },
+      }
+    );
+  };
 
   const tabs: { label: string; value: ListOrdersStatus | "archived" | undefined }[] = [
     { label: "All", value: undefined },
@@ -161,10 +162,13 @@ const handleUnarchiveOrder = (orderId: number) => {
     { label: "Archived", value: "archived" },
   ];
 
+  // Robust check for both camelCase and snake_case properties returned by API
+  const isOrderArchived = (o: Order) => Boolean(o.isArchived || o.is_archived);
+
   // Filter orders for active list vs archived list
   const filteredOrders = (orders as Order[])?.filter((o) => {
-    if (filter === "archived") return o.isArchived === true;
-    return !o.isArchived;
+    if (filter === "archived") return isOrderArchived(o);
+    return !isOrderArchived(o);
   }) ?? [];
 
   return (
@@ -213,73 +217,76 @@ const handleUnarchiveOrder = (orderId: number) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow
-                  key={order.id}
-                  className="border-b border-border hover:bg-muted/60 transition-colors cursor-pointer"
-                  onClick={() => setSelected(order)}
-                >
-                  <TableCell className="p-4 align-middle font-mono font-bold text-sm">
-                    #{order.id.toString().padStart(5, "0")}
-                  </TableCell>
-                  <TableCell className="p-4 align-middle text-sm text-muted-foreground">
-                    {format(new Date(order.createdAt), "MMM d, yyyy")}
-                  </TableCell>
-                  <TableCell className="p-4 align-middle">
-                    <div className="font-bold text-sm">{order.customerName}</div>
-                    <div className="text-xs text-muted-foreground">{order.customerPhone}</div>
-                    <div className="text-xs text-muted-foreground">{order.customerCity}</div>
-                  </TableCell>
-                  <TableCell className="p-4 align-middle font-bold text-sm">
-                    {formatPKR(order.totalAmount)}
-                  </TableCell>
-                  <TableCell className="p-4 align-middle text-sm text-muted-foreground">
-                    {order.items.length} item{order.items.length !== 1 ? "s" : ""}
-                  </TableCell>
-                  <TableCell className="p-4 align-middle text-right" onClick={(e) => e.stopPropagation()}>
-                    <Select
-                      value={order.status}
-                      onValueChange={(val) => requestStatusChange(order, val as UpdateOrderStatusBodyStatus)}
-                      disabled={updateStatus.isPending}
-                    >
-                      <SelectTrigger className="w-[140px] ml-auto h-8 rounded-none border-border text-xs font-bold uppercase tracking-wider">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-none border-border">
-                        <SelectItem value="pending" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Pending</SelectItem>
-                        <SelectItem value="confirmed" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Confirmed</SelectItem>
-                        <SelectItem value="delivered" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Delivered</SelectItem>
-                        <SelectItem value="cancelled" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell className="p-4 align-middle text-right" onClick={(e) => e.stopPropagation()}>
-                    {order.isArchived ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleUnarchiveOrder(order.id)}
-                        title="Restore Order"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground transition-colors"
+              {filteredOrders.map((order) => {
+                const archived = isOrderArchived(order);
+                return (
+                  <TableRow
+                    key={order.id}
+                    className="border-b border-border hover:bg-muted/60 transition-colors cursor-pointer"
+                    onClick={() => setSelected(order)}
+                  >
+                    <TableCell className="p-4 align-middle font-mono font-bold text-sm">
+                      #{order.id.toString().padStart(5, "0")}
+                    </TableCell>
+                    <TableCell className="p-4 align-middle text-sm text-muted-foreground">
+                      {format(new Date(order.createdAt), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell className="p-4 align-middle">
+                      <div className="font-bold text-sm">{order.customerName}</div>
+                      <div className="text-xs text-muted-foreground">{order.customerPhone}</div>
+                      <div className="text-xs text-muted-foreground">{order.customerCity}</div>
+                    </TableCell>
+                    <TableCell className="p-4 align-middle font-bold text-sm">
+                      {formatPKR(order.totalAmount)}
+                    </TableCell>
+                    <TableCell className="p-4 align-middle text-sm text-muted-foreground">
+                      {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                    </TableCell>
+                    <TableCell className="p-4 align-middle text-right" onClick={(e) => e.stopPropagation()}>
+                      <Select
+                        value={order.status}
+                        onValueChange={(val) => requestStatusChange(order, val as UpdateOrderStatusBodyStatus)}
+                        disabled={updateStatus.isPending}
                       >
-                        <RotateCcw className="w-4 h-4" />
-                      </Button>
-                    ) : (
-                      (order.status === "delivered" || order.status === "cancelled") && (
+                        <SelectTrigger className="w-[140px] ml-auto h-8 rounded-none border-border text-xs font-bold uppercase tracking-wider">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-none border-border">
+                          <SelectItem value="pending" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Pending</SelectItem>
+                          <SelectItem value="confirmed" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Confirmed</SelectItem>
+                          <SelectItem value="delivered" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Delivered</SelectItem>
+                          <SelectItem value="cancelled" className="text-xs font-bold uppercase tracking-wider cursor-pointer rounded-none">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="p-4 align-middle text-right" onClick={(e) => e.stopPropagation()}>
+                      {archived ? (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setPendingArchive(order)}
-                          title="Archive Order"
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
+                          onClick={() => handleUnarchiveOrder(order.id)}
+                          title="Restore Order"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          <Archive className="w-4 h-4" />
+                          <RotateCcw className="w-4 h-4" />
                         </Button>
-                      )
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                      ) : (
+                        (order.status === "delivered" || order.status === "cancelled") && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPendingArchive(order)}
+                            title="Archive Order"
+                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Archive className="w-4 h-4" />
+                          </Button>
+                        )
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
@@ -400,7 +407,7 @@ const handleUnarchiveOrder = (orderId: number) => {
                     <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground">Total (Cash on Delivery)</span>
                     <span className="font-serif font-bold text-lg">{formatPKR(selected.totalAmount)}</span>
                   </div>
-                  {selected.isArchived ? (
+                  {isOrderArchived(selected) ? (
                     <Button
                       variant="outline"
                       className="w-full rounded-none uppercase font-bold text-xs mt-2"
