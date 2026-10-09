@@ -98,15 +98,18 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
 // -----------------------------------------------------------------------------
 // GET /stats - Fetch Store Statistics
 // -----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// GET /stats - Fetch Store Statistics
+// -----------------------------------------------------------------------------
 router.get("/stats", async (req: Request, res: Response): Promise<void> => {
   try {
     const ordersResult = await db.execute(sql`
       SELECT 
-        COUNT(*) FILTER (WHERE is_archived IS NOT TRUE) as total_orders,
-        COUNT(*) FILTER (WHERE status = 'pending' AND is_archived IS NOT TRUE) as pending_orders,
-        COUNT(*) FILTER (WHERE status = 'confirmed' AND is_archived IS NOT TRUE) as confirmed_orders,
-        COUNT(*) FILTER (WHERE status = 'delivered' AND is_archived IS NOT TRUE) as delivered_orders,
-        COUNT(*) FILTER (WHERE status = 'cancelled' AND is_archived IS NOT TRUE) as cancelled_orders,
+        COUNT(*) as total_orders,
+        COUNT(*) FILTER (WHERE status = 'pending') as pending_orders,
+        COUNT(*) FILTER (WHERE status = 'confirmed') as confirmed_orders,
+        COUNT(*) FILTER (WHERE status = 'delivered') as delivered_orders,
+        COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled_orders,
         COALESCE(SUM(CAST(total_amount AS DECIMAL)) FILTER (WHERE status = 'delivered'), 0) as total_revenue
       FROM orders
     `);

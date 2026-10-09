@@ -317,16 +317,19 @@ router.put("/:id", async (req, res): Promise<void> => {
 });
 
 // 5. ARCHIVE ORDER (Soft Delete)
-router.patch("/:id/archive", async (req, res): Promise<void> => {
+// ARCHIVE ORDER (Soft Delete) - Using PUT to avoid 405 Method Not Allowed
+router.put("/:id/archive", async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid order ID" });
     return;
   }
   try {
+    const isArchived = req.body.isArchived ?? true;
+
     const [updated] = await db
       .update(ordersTable)
-      .set({ isArchived: true } as any)
+      .set({ isArchived } as any)
       .where(eq(ordersTable.id, id))
       .returning();
 
@@ -335,7 +338,7 @@ router.patch("/:id/archive", async (req, res): Promise<void> => {
       return;
     }
 
-    res.json({ success: true, message: "Order archived successfully", order: mapOrder(updated) });
+    res.json({ success: true, message: "Order archive status updated", order: mapOrder(updated) });
   } catch (err) {
     req.log.error({ err }, "Failed to archive order");
     res.status(500).json({ error: "Internal server error" });

@@ -111,27 +111,25 @@ export default function AdminOrders() {
     );
   };
 
-  // Archive / Soft Delete Handler
-  const confirmArchiveOrder = async () => {
-    if (!pendingArchive) return;
-    try {
-      // Call backend API to archive
-      await fetch(`/api/orders/${pendingArchive.id}/archive`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isArchived: true }),
-      });
+ const confirmArchiveOrder = async () => {
+  if (!pendingArchive) return;
+  try {
+    await fetch(`/api/orders/${pendingArchive.id}/archive`, {
+      method: "PUT", // 👈 Changed from PATCH to PUT
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isArchived: true }),
+    });
 
-      queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
-      if (selected?.id === pendingArchive.id) {
-        setSelected(null);
-      }
-    } catch (err) {
-      console.error("Failed to archive order", err);
-    } finally {
-      setPendingArchive(null);
+    queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+    if (selected?.id === pendingArchive.id) {
+      setSelected(null);
     }
-  };
+  } catch (err) {
+    console.error("Failed to archive order", err);
+  } finally {
+    setPendingArchive(null);
+  }
+};
 
   const tabs: { label: string; value: ListOrdersStatus | undefined }[] = [
     { label: "All", value: undefined },
