@@ -53,7 +53,6 @@ router.post("/", async (req, res): Promise<void> => {
         const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
         if (!product) throw new Error(`Product ${item.productId} not found`);
 
-        // Check if enough stock exists before creating order
         if (product.stock < item.quantity) {
           throw new Error(`Insufficient overall stock for ${product.name}`);
         }
@@ -64,14 +63,13 @@ router.post("/", async (req, res): Promise<void> => {
           quantity: item.quantity,
           size: item.size,
           price: Number(product.price),
-          currentProduct: product, // Retain product reference for inventory update
+          currentProduct: product,
         };
       })
     );
 
     const totalAmount = itemsWithDetails.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-    // Save the order to DB
     const [order] = await db
       .insert(ordersTable)
       .values({
@@ -83,31 +81,48 @@ router.post("/", async (req, res): Promise<void> => {
         notes: parsed.data.notes ?? null,
         status: "pending",
         totalAmount: String(totalAmount),
-        items: itemsWithDetails.map(({ currentProduct, ...item }) => item), // Strip internal currentProduct ref before saving items JSON
+        items: itemsWithDetails.map(({ currentProduct, ...item }) => item),
       })
       .returning();
 
-    // Deduct stock and size_inventory for each ordered item
+    // Deduct stock and size-specific inventory
     await Promise.all(
       itemsWithDetails.map(async (item) => {
         const product = item.currentProduct;
         const newStock = Math.max(0, product.stock - item.quantity);
 
-        let newSizeInventory = product.sizeInventory as Record<string, number> | null;
+        let sizeInv: Array<{ size: string; qty: number }> = [];
 
-        if (newSizeInventory && typeof newSizeInventory === "object") {
-          const currentSizeStock = Number(newSizeInventory[item.size] ?? 0);
-          newSizeInventory = {
-            ...newSizeInventory,
-            [item.size]: Math.max(0, currentSizeStock - item.quantity),
-          };
+        let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
+        if (typeof rawInv === "string") {
+          try {
+            rawInv = JSON.parse(rawInv);
+          } catch {
+            rawInv = [];
+          }
+        }
+
+        if (Array.isArray(rawInv)) {
+          sizeInv = rawInv.map((s: any) => ({
+            size: String(s.size),
+            qty: Number(s.qty ?? 0),
+          }));
+        }
+
+        if (sizeInv.length > 0) {
+          sizeInv = sizeInv.map((s) => {
+            if (s.size.toLowerCase() === item.size.toLowerCase()) {
+              return { ...s, qty: Math.max(0, s.qty - item.quantity) };
+            }
+            return s;
+          });
         }
 
         await db
           .update(productsTable)
           .set({
             stock: newStock,
-            sizeInventory: newSizeInventory,
+            sizeInventory: sizeInv.length > 0 ? (sizeInv as any) : (product as any).sizeInventory,
           })
           .where(eq(productsTable.id, item.productId));
       })
