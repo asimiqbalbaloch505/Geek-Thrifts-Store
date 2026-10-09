@@ -169,6 +169,7 @@ router.get("/:id", async (req, res): Promise<void> => {
 
 // 4. SHARED UPDATE ORDER HANDLER (Status Change, Inventory Sync & Archiving)
 // Shared update order handler
+// Shared update order handler
 async function handleUpdateOrder(req: any, res: any): Promise<void> {
   const id = Number(req.params.id);
   if (isNaN(id)) {
@@ -191,44 +192,23 @@ async function handleUpdateOrder(req: any, res: any): Promise<void> {
     const previousStatus = String(existingOrder.status ?? "").trim().toLowerCase();
     const newStatus = req.body.status ? String(req.body.status).trim().toLowerCase() : previousStatus;
 
-    // 1. Build dynamic update object
+    // Build update payload
     const updateData: Record<string, any> = {};
 
     if (req.body.status !== undefined) {
       updateData.status = req.body.status;
     }
 
-    // Try setting isArchived dynamically
     if (req.body.isArchived !== undefined) {
       updateData.isArchived = Boolean(req.body.isArchived);
     }
 
-    let updatedOrder: typeof ordersTable.$inferSelect | undefined;
-
-    try {
-      const [updated] = await db
-        .update(ordersTable)
-        .set(updateData)
-        .where(eq(ordersTable.id, id))
-        .returning();
-      updatedOrder = updated;
-    } catch (dbErr: any) {
-      // Fallback: If live DB lacks 'is_archived' column yet, update status only without crashing
-      req.log.warn({ dbErr }, "Database column 'is_archived' missing; falling back to status update");
-      
-      delete updateData.isArchived;
-
-      if (Object.keys(updateData).length > 0) {
-        const [updated] = await db
-          .update(ordersTable)
-          .set(updateData)
-          .where(eq(ordersTable.id, id))
-          .returning();
-        updatedOrder = updated;
-      } else {
-        updatedOrder = existingOrder;
-      }
-    }
+    // Direct database update
+    const [updatedOrder] = await db
+      .update(ordersTable)
+      .set(updateData)
+      .where(eq(ordersTable.id, id))
+      .returning();
 
     if (!updatedOrder) {
       res.status(500).json({ error: "Failed to update order" });
