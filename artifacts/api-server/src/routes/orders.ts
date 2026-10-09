@@ -190,35 +190,37 @@ async function handleUpdateOrder(req: any, res: any): Promise<void> {
     const previousStatus = String(existingOrder.status ?? "").trim().toLowerCase();
     const newStatus = req.body.status ? String(req.body.status).trim().toLowerCase() : previousStatus;
 
-    // Prepare update payload
-    const updateData: Record<string, any> = {};
+    // Check for both camelCase and snake_case body properties
+    const archiveValue = req.body.isArchived !== undefined ? req.body.isArchived : req.body.is_archived;
 
+    // 1. If updating status or using standard ORM fields
     if (req.body.status !== undefined) {
-      updateData.status = req.body.status;
+      await db
+        .update(ordersTable)
+        .set({ status: req.body.status })
+        .where(eq(ordersTable.id, id));
     }
 
-    if (req.body.isArchived !== undefined) {
-      updateData.isArchived = Boolean(req.body.isArchived);
+    // 2. Handle archiving directly via SQL query to avoid empty SET clause syntax errors
+    if (archiveValue !== undefined) {
+      await db.execute(
+        sql`UPDATE orders SET is_archived = ${Boolean(archiveValue)} WHERE id = ${id}`
+      );
     }
 
-    if (Object.keys(updateData).length === 0) {
-      res.status(400).json({ error: "No update fields provided" });
-      return;
-    }
-
-    // Perform database update
+    // Fetch the updated order record
     const [updatedOrder] = await db
-      .update(ordersTable)
-      .set(updateData)
+      .select()
+      .from(ordersTable)
       .where(eq(ordersTable.id, id))
-      .returning();
+      .limit(1);
 
     if (!updatedOrder) {
-      res.status(500).json({ error: "Failed to update order" });
+      res.status(500).json({ error: "Failed to fetch updated order" });
       return;
     }
 
-    // ONLY RUN INVENTORY SYNC IF STATUS ACTUALLY CHANGED
+    // INVENTORY SYNC (Only when status actually changes)
     if (req.body.status !== undefined && previousStatus !== newStatus) {
       let items: Array<{ productId: number; quantity: number; size: string }> = [];
       try {
@@ -228,7 +230,6 @@ async function handleUpdateOrder(req: any, res: any): Promise<void> {
       }
 
       if (Array.isArray(items)) {
-        // RESTORE INVENTORY on cancellation
         if (previousStatus !== "cancelled" && newStatus === "cancelled") {
           await Promise.all(
             items.map(async (item) => {
@@ -273,9 +274,7 @@ async function handleUpdateOrder(req: any, res: any): Promise<void> {
                 .where(eq(productsTable.id, item.productId));
             })
           );
-        } 
-        // RE-DEDUCT INVENTORY on reactivation
-        else if (previousStatus === "cancelled" && newStatus !== "cancelled") {
+        } else if (previousStatus === "cancelled" && newStatus !== "cancelled") {
           await Promise.all(
             items.map(async (item) => {
               const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);

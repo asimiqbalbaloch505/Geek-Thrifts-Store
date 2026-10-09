@@ -1,24 +1,17 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "./schema/index.js";
+import { pgTable, serial, text, numeric, jsonb, timestamp, boolean } from "drizzle-orm/pg-core";
 
-const { Pool } = pg;
-
-const connectionString =
-  process.env.DATABASE_URL ||
-  "postgresql://postgres:GeekThriftsPass2026!@db.tzremfxsabivlumuezgd.supabase.co:5432/postgres";
-
-export const pool = new Pool({
-  connectionString,
-  max: 1, // Optimal connection limit for Vercel serverless functions
-  idleTimeoutMillis: 3000,
-  connectionTimeoutMillis: 5000,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+export const ordersTable = pgTable("orders", {
+  id: serial("id").primaryKey(),
+  customerName: text("customer_name").notNull(),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone").notNull(),
+  customerAddress: text("customer_address").notNull(),
+  customerCity: text("customer_city").notNull(),
+  notes: text("notes"),
+  status: text("status").notNull().default("pending"),
+  totalAmount: numeric("total_amount").notNull(),
+  items: jsonb("items").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  // 🟢 MAKE SURE THIS FIELD IS DEFINED
+  isArchived: boolean("is_archived").default(false).notNull(),
 });
-
-export const db = drizzle(pool, { schema });
-
-// Export all database tables, relations, schemas, and types
-export * from "./schema/index.js";
