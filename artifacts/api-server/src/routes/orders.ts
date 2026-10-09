@@ -178,15 +178,113 @@ router.put("/:id", async (req, res): Promise<void> => {
     return;
   }
   try {
-    const [updated] = await db
-      .update(ordersTable)
-      .set({ status: parsed.data.status })
+    // 1. Fetch current order state before updating
+    const [existingOrder] = await db
+      .select()
+      .from(ordersTable)
       .where(eq(ordersTable.id, paramsParsed.data.id))
-      .returning();
-    if (!updated) {
+      .limit(1);
+
+    if (!existingOrder) {
       res.status(404).json({ error: "Order not found" });
       return;
     }
+
+    const previousStatus = existingOrder.status;
+    const newStatus = parsed.data.status;
+
+    // 2. Perform the order status update
+    const [updated] = await db
+      .update(ordersTable)
+      .set({ status: newStatus })
+      .where(eq(ordersTable.id, paramsParsed.data.id))
+      .returning();
+
+    // 3. Handle stock restoration on cancellation (or re-deduction on uncancellation)
+    const items = existingOrder.items as Array<{ productId: number; quantity: number; size: string }>;
+
+    if (previousStatus !== "cancelled" && newStatus === "cancelled") {
+      // Order was CANCELLED -> Restore stock and size_inventory
+      await Promise.all(
+        items.map(async (item) => {
+          const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
+          if (!product) return;
+
+          const newStock = product.stock + item.quantity;
+          let sizeInv: Array<{ size: string; qty: number }> = [];
+
+          let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
+          if (typeof rawInv === "string") {
+            try { rawInv = JSON.parse(rawInv); } catch { rawInv = []; }
+          }
+
+          if (Array.isArray(rawInv)) {
+            sizeInv = rawInv.map((s: any) => ({
+              size: String(s.size),
+              qty: Number(s.qty ?? 0),
+            }));
+          }
+
+          if (sizeInv.length > 0) {
+            sizeInv = sizeInv.map((s) => {
+              if (s.size.toLowerCase() === item.size.toLowerCase()) {
+                return { ...s, qty: s.qty + item.quantity };
+              }
+              return s;
+            });
+          }
+
+          await db
+            .update(productsTable)
+            .set({
+              stock: newStock,
+              sizeInventory: sizeInv.length > 0 ? (sizeInv as any) : (product as any).sizeInventory,
+            })
+            .where(eq(productsTable.id, item.productId));
+        })
+      );
+    } else if (previousStatus === "cancelled" && newStatus !== "cancelled") {
+      // Order was RE-ACTIVATED -> Re-deduct stock and size_inventory
+      await Promise.all(
+        items.map(async (item) => {
+          const [product] = await db.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
+          if (!product) return;
+
+          const newStock = Math.max(0, product.stock - item.quantity);
+          let sizeInv: Array<{ size: string; qty: number }> = [];
+
+          let rawInv = (product as any).sizeInventory ?? (product as any).size_inventory;
+          if (typeof rawInv === "string") {
+            try { rawInv = JSON.parse(rawInv); } catch { rawInv = []; }
+          }
+
+          if (Array.isArray(rawInv)) {
+            sizeInv = rawInv.map((s: any) => ({
+              size: String(s.size),
+              qty: Number(s.qty ?? 0),
+            }));
+          }
+
+          if (sizeInv.length > 0) {
+            sizeInv = sizeInv.map((s) => {
+              if (s.size.toLowerCase() === item.size.toLowerCase()) {
+                return { ...s, qty: Math.max(0, s.qty - item.quantity) };
+              }
+              return s;
+            });
+          }
+
+          await db
+            .update(productsTable)
+            .set({
+              stock: newStock,
+              sizeInventory: sizeInv.length > 0 ? (sizeInv as any) : (product as any).sizeInventory,
+            })
+            .where(eq(productsTable.id, item.productId));
+        })
+      );
+    }
+
     res.json(mapOrder(updated));
 
     sendStatusUpdateEmails({
