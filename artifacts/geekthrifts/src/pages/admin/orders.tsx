@@ -112,43 +112,45 @@ export default function AdminOrders() {
   };
 
   // Archive / Soft Delete Handler
-  const confirmArchiveOrder = async () => {
-    if (!pendingArchive) return;
-    try {
-      await fetch(`/api/orders/${pendingArchive.id}`, {
-        method: "POST", // Bypasses server PUT restrictions
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isArchived: true }),
-      });
+  // Confirm Archive Order using React Query client hook
+const confirmArchiveOrder = () => {
+  if (!pendingArchive) return;
 
-      queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
-      if (selected?.id === pendingArchive.id) {
-        setSelected(null);
-      }
-    } catch (err) {
-      console.error("Failed to archive order", err);
-    } finally {
-      setPendingArchive(null);
+  updateStatus.mutate(
+    { id: pendingArchive.id, data: { isArchived: true } as any },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+        if (selected?.id === pendingArchive.id) {
+          setSelected(null);
+        }
+        setPendingArchive(null);
+      },
+      onError: (err) => {
+        console.error("Failed to archive order", err);
+        setPendingArchive(null);
+      },
     }
-  };
+  );
+};
 
-  // Restore / Un-archive Order
-  const handleUnarchiveOrder = async (orderId: number) => {
-    try {
-      await fetch(`/api/orders/${orderId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isArchived: false }),
-      });
-
-      queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
-      if (selected?.id === orderId) {
-        setSelected(null);
-      }
-    } catch (err) {
-      console.error("Failed to restore order", err);
+// Confirm Un-archive Order using React Query client hook
+const handleUnarchiveOrder = (orderId: number) => {
+  updateStatus.mutate(
+    { id: orderId, data: { isArchived: false } as any },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListOrdersQueryKey() });
+        if (selected?.id === orderId) {
+          setSelected(null);
+        }
+      },
+      onError: (err) => {
+        console.error("Failed to restore order", err);
+      },
     }
-  };
+  );
+};
 
   const tabs: { label: string; value: ListOrdersStatus | "archived" | undefined }[] = [
     { label: "All", value: undefined },

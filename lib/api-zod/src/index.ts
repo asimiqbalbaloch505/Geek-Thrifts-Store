@@ -53,3 +53,11 @@ export const UpdateProductParams = z.object({
 });
 
 export type UpdateProductParamsType = z.infer<typeof UpdateProductParams>;
+
+// 🟢 Custom / Overridden UpdateOrderStatusBody to support isArchived
+export const UpdateOrderStatusBody = z.object({
+  status: z.enum(["pending", "confirmed", "delivered", "cancelled"]).optional(),
+  isArchived: z.boolean().optional(),
+});
+
+export type UpdateOrderStatusBodyType = z.infer<typeof UpdateOrderStatusBody>;
